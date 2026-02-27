@@ -131,7 +131,16 @@ def calc_v7_score(e: dict) -> int:
 
     # BONUSES
     if e.get('sea_view'):                          score += 3
-    if e.get('dist_to_sea_km', 9) < 0.5:          score += 2
+    # Walk time to sea (replaces straight-line dist — accounts for Porto hills)
+    walk_min = e.get('walk_time_sea_min') or 0
+    dist_km  = e.get('dist_to_sea_km', 9) or 9
+    if walk_min > 0:
+        if walk_min <= 8:   score += 2   # ≤8 min walk
+        elif walk_min <= 15: score += 1  # 8-15 min walk
+    elif dist_km < 0.5:     score += 2   # fallback to straight-line
+    # Elevation bonus — ground floor on a hill is fine; penalise extreme altitude
+    elev = e.get('elevation_m') or 0
+    if elev > 80:  score -= 1  # very high up in Porto = long walk down
     if e.get('owner_direct'):                      score += 1
     if e.get('days_on_market', 0) > 60:            score += 1  # negotiable
 
@@ -226,6 +235,8 @@ def main():
             'elevator': has_elevator, 'floor_level': floor_raw,
             'sun_exposure': sun,
             'dist_to_sea_km': geo.get('dist_to_sea_km', 5.0),
+            'walk_time_sea_min': geo.get('walk_time_sea_min'),
+            'elevation_m': geo.get('elevation_m'),
             'dist_to_foz_km': geo.get('dist_to_foz_km'),
             'sea_view': has_sea_view, 'outdoor_space': outdoor,
             'owner_direct': owner_direct,
@@ -268,7 +279,7 @@ SHEET_HEADERS = [
     'Rank', 'Score v7', 'ID', 'Rooms', 'Size m²', 'Área Útil', 'Space/Room m²', 'WCs',
     'Price €/mo', '€/m²', 'Price Δ%', 'Days on Market',
     'Neighbourhood', 'Floor', 'Sun Exposure',
-    'Sea View', 'Dist Sea (km)', 'Garage', 'Parking Spaces', 'Storage', 'Elevator', 'Outdoor',
+    'Sea View', 'Dist Sea (km)', 'Walk to Sea (min)', 'Elevation (m)', 'Garage', 'Parking Spaces', 'Storage', 'Elevator', 'Outdoor',
     'Owner Direct', 'Image Score', 'Renovation', 'Feel', 'Finish', 'Light',
     'Red Flags', 'Image Summary',
     'Supermarket', 'Supermarket km', 'Pharmacy km', 'Restaurants 300m', 'Metro km', 'Beach km', 'Schools 1km', 'Commerce Notes',
@@ -282,6 +293,7 @@ def row_from_enriched(rank: int, e: dict) -> list:
         e.get('price_eur'), e.get('price_per_m2'), e.get('price_delta_pct'),
         e.get('days_on_market'), e.get('neighborhood'), e.get('floor_level'), e.get('sun_exposure'),
         'Yes' if e.get('sea_view') else 'No', e.get('dist_to_sea_km'),
+        e.get('walk_time_sea_min'), e.get('elevation_m'),
         'Yes' if e.get('has_garage') else 'No', e.get('parking_spaces'),
         'Yes' if e.get('has_storage') else 'No',
         'Yes' if e.get('elevator') else 'No', e.get('outdoor_space') or '',

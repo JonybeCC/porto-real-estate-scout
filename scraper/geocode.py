@@ -9,6 +9,7 @@ Adds: lat, lng, distance_to_foz_km, distance_to_sea_km
 import json
 import time
 import math
+import os
 import requests
 from datetime import datetime
 
@@ -31,11 +32,37 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return round(R * 2 * math.asin(math.sqrt(a)), 2)
 
-def geocode(street, neighborhood, city='Porto'):
-    """Try progressively broader queries until we get a result."""
-    queries = []
+OPENCAGE_KEY = os.environ.get('OPENCAGE_API_KEY', '')  # free 2500/day at opencagedata.com
 
-    # Build clean street name
+def geocode_opencage(query):
+    """OpenCage fallback — better Portugal coverage than Nominatim"""
+    if not OPENCAGE_KEY:
+        return None
+    try:
+        r = requests.get(
+            'https://api.opencagedata.com/geocode/v1/json',
+            params={'q': query, 'key': OPENCAGE_KEY, 'language': 'pt',
+                    'countrycode': 'pt', 'limit': 1, 'no_annotations': 1},
+            timeout=10
+        )
+        if r.status_code == 200:
+            results = r.json().get('results', [])
+            if results and results[0].get('confidence', 0) >= 6:
+                geom = results[0]['geometry']
+                return {
+                    'lat': geom['lat'], 'lng': geom['lng'],
+                    'geocode_query': query,
+                    'geocode_display': results[0].get('formatted', '')[:100],
+                    'geocode_confidence': f'opencage:{results[0].get("confidence",0)}',
+                }
+    except:
+        pass
+    return None
+
+
+def geocode(street, neighborhood, city='Porto'):
+    """Try progressively broader queries. OpenCage fallback if Nominatim returns only neighbourhood-level."""
+    queries = []
     street_clean = street.strip().rstrip(',').strip() if street else ''
 
     if street_clean and len(street_clean) > 5:
@@ -44,6 +71,7 @@ def geocode(street, neighborhood, city='Porto'):
         queries.append(f'{neighborhood}, Porto, Portugal')
     queries.append('Foz do Douro, Porto, Portugal')  # fallback
 
+    best = None
     for q in queries:
         try:
             r = requests.get(NOMINATIM_URL, params={
@@ -54,18 +82,28 @@ def geocode(street, neighborhood, city='Porto'):
             if results:
                 res = results[0]
                 lat, lon = float(res['lat']), float(res['lon'])
-                return {
+                confidence = 'street' if street_clean and street_clean.lower() in q.lower() else 'neighborhood'
+                result = {
                     'lat': lat, 'lng': lon,
                     'geocode_query': q,
                     'geocode_display': res.get('display_name', '')[:100],
-                    'geocode_confidence': 'street' if street_clean in q else 'neighborhood',
+                    'geocode_confidence': confidence,
                 }
-            time.sleep(1.1)  # Nominatim rate limit: 1 req/sec
+                if confidence == 'street':
+                    return result  # street-level hit — good enough
+                best = result  # neighbourhood hit — try OpenCage first
+            time.sleep(1.1)
         except Exception as e:
             time.sleep(1)
             continue
 
-    return None
+    # Try OpenCage for street-level if Nominatim only got neighbourhood
+    if best and best['geocode_confidence'] == 'neighborhood' and street_clean and len(street_clean) > 5:
+        oc = geocode_opencage(f'{street_clean}, Porto, Portugal')
+        if oc:
+            return oc
+
+    return best
 
 def main():
     print('🦞 Geocoder — Nominatim')
