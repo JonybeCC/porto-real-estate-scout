@@ -179,14 +179,19 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         existing = {}
 
-    # Analyze listings that have photos (use photo_urls from ZenRows)
-    to_do = {lid: d for lid, d in details.items()
-             if lid not in existing and d.get('photo_urls')}
+    # Analyze listings that have photos — try photo_urls first, fallback to unblurred_photos
+    to_do = {}
+    for lid, d in details.items():
+        if lid in existing:
+            continue
+        photos = d.get('photo_urls') or d.get('unblurred_photos')
+        if photos:
+            to_do[lid] = {**d, '_photos_to_use': photos}
     print(f'📦 {len(to_do)} listings with photos to analyze\n')
 
     total_imgs = 0
     for i, (lid, detail) in enumerate(to_do.items(), 1):
-        photos = detail['photo_urls']
+        photos = detail.get('_photos_to_use') or detail.get('photo_urls') or detail.get('unblurred_photos', [])
         # Build info string
         info = f'ID:{lid}'
 
