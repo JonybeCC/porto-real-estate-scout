@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 """
-Re-listing Detector — JBizz Assistant 🦞
-Detects when the same property is re-listed under a new ID.
-Checks: same neighbourhood + rooms + size (±10%) + price (±15%) but different ID.
-Also cross-references address strings when available.
+Re-listing Detector v2 — JBizz Assistant 🦞
+
+Detects genuine duplicate listings on the Porto market:
+1. Same address string → almost certainly same property, different agency or re-list
+2. Same description fingerprint (first 150 chars) → copy-paste between agencies
+3. High structural match (same rooms + size ±5% + price ±10%) AND same neighbourhood
+   — only flagged if supported by at least one of the above signals
+
+NOT flagged: two different T2s at €2200 in Foz — that's just a competitive market.
 """
 
-import json, re, os
-from datetime import datetime, date
-from itertools import combinations
+import json, os, re
+from datetime import date
 
-LISTINGS_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'
-DETAILS_FILE   = '/root/.openclaw/workspace/projects/real-estate/data/listing_details_zenrows.json'
-ENRICHED_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/enriched_listings.json'
-RELIST_FILE    = '/root/.openclaw/workspace/projects/real-estate/data/relistings.json'
-BOT_TOKEN      = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-CHAT_ID        = '520980639'
+LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'
+DETAILS_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/listing_details_zenrows.json'
+RELIST_FILE   = '/root/.openclaw/workspace/projects/real-estate/data/relistings.json'
+BOT_TOKEN     = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+CHAT_ID       = '520980639'
 
 
 def load_json(path, default):
@@ -24,126 +27,157 @@ def load_json(path, default):
     except: return default
 
 
-def normalise_address(s: str) -> str:
-    """Strip numbers, lowercase, remove common filler words for fuzzy matching."""
-    s = s.lower()
-    for w in ['apartamento', 'arrendamento', 't2', 't3', 'na', 'no', 'em', 'rua', 'avenida', 'av.', 'de', 'da', 'do']:
-        s = re.sub(r'\b' + w + r'\b', '', s)
+def norm_addr(s: str) -> str:
+    """Strip boilerplate Idealista prefix, lowercase."""
+    s = re.sub(r'^arrendamento de apartamento \w+ (na?o?|em|em)\s+', '', s.lower().strip())
     return re.sub(r'\s+', ' ', s).strip()
 
 
-def similarity_score(a: dict, b: dict, details: dict) -> tuple[float, list]:
-    """Return (0-1 score, reasons list)."""
-    reasons = []
-    score = 0.0
-
-    # Same rooms
-    if a.get('rooms') and a['rooms'] == b.get('rooms'):
-        score += 0.25
-        reasons.append(f'same rooms ({a["rooms"]})')
-
-    # Same neighbourhood
-    neigh_a = (a.get('neighborhood') or '').lower()
-    neigh_b = (b.get('neighborhood') or '').lower()
-    if neigh_a and neigh_b and (neigh_a in neigh_b or neigh_b in neigh_a or neigh_a == neigh_b):
-        score += 0.2
-        reasons.append(f'same neighbourhood')
-
-    # Similar size (±10%)
-    sz_a, sz_b = a.get('size_m2') or 0, b.get('size_m2') or 0
-    if sz_a and sz_b and abs(sz_a - sz_b) / max(sz_a, sz_b) <= 0.10:
-        score += 0.25
-        reasons.append(f'similar size ({sz_a}m² vs {sz_b}m²)')
-
-    # Similar price (±15%)
-    pr_a, pr_b = a.get('price_eur') or 0, b.get('price_eur') or 0
-    if pr_a and pr_b:
-        diff_pct = abs(pr_a - pr_b) / max(pr_a, pr_b)
-        if diff_pct <= 0.15:
-            score += 0.15
-            reasons.append(f'similar price (€{pr_a} vs €{pr_b}, {diff_pct*100:.0f}% diff)')
-
-    # Address overlap from details
-    det_a = details.get(a['id'], {})
-    det_b = details.get(b['id'], {})
-    addr_a = normalise_address(det_a.get('full_address', '') or a.get('title', ''))
-    addr_b = normalise_address(det_b.get('full_address', '') or b.get('title', ''))
-    if addr_a and addr_b and len(addr_a) > 8 and len(addr_b) > 8:
-        # Word overlap
-        words_a = set(addr_a.split())
-        words_b = set(addr_b.split())
-        common = words_a & words_b - {'porto', 'foz', ''}
-        if len(common) >= 2:
-            score += 0.15
-            reasons.append(f'address overlap: {common}')
-
-    return score, reasons
+def desc_fingerprint(desc: str) -> str:
+    """First 150 chars of description, stripped."""
+    if not desc:
+        return ''
+    return re.sub(r'\s+', ' ', desc.strip().lower())[:150]
 
 
 def run():
-    print(f'🔍 Re-listing Detector — {date.today()}')
+    today = str(date.today())
+    print(f'🔁 Re-listing Detector v2 — {today}')
+
     listings = load_json(LISTINGS_FILE, [])
     details  = {d['id']: d for d in load_json(DETAILS_FILE, [])}
-    existing = load_json(RELIST_FILE, [])
-    known_pairs = {(r['id_a'], r['id_b']) for r in existing}
+
+    # Build lookup maps
+    addr_map  = {}   # norm_address → [ids]
+    desc_map  = {}   # desc_fingerprint → [ids]
+    struct_map = {}  # (rooms, size_bucket, neigh_key) → [ids]
+
+    for l in listings:
+        lid  = l['id']
+        det  = details.get(lid, {})
+
+        # 1. Address
+        raw_addr = det.get('full_address', '') or l.get('title', '')
+        addr = norm_addr(raw_addr)
+        # Skip generic "em Foz" type addresses — not specific enough
+        if addr and len(addr) > 15 and not re.match(r'^em [a-z\s]+$', addr):
+            addr_map.setdefault(addr, []).append(lid)
+
+        # 2. Description fingerprint
+        fp = desc_fingerprint(det.get('full_description', ''))
+        if fp and len(fp) > 50:
+            desc_map.setdefault(fp, []).append(lid)
+
+        # 3. Structural (rooms + size bucket + neighbourhood) — only for exact matches
+        rooms = l.get('rooms', '')
+        size  = l.get('size_m2') or 0
+        neigh = (l.get('neighborhood') or '').lower()[:20]
+        price = l.get('price_eur') or 0
+        if rooms and size and neigh:
+            # Bucket size to nearest 5m² for fuzzy match
+            size_b = round(size / 5) * 5
+            key = (rooms, size_b, neigh)
+            struct_map.setdefault(key, []).append({'id': lid, 'price': price, 'url': l.get('url','')})
 
     candidates = []
-    comparisons = 0
+    seen_pairs = set()
 
-    # Only compare active listings with both rooms and size known
-    valid = [l for l in listings if l.get('rooms') and l.get('size_m2') and l.get('price_eur')]
-    print(f'📦 Comparing {len(valid)} valid listings ({len(valid)*(len(valid)-1)//2} pairs)...')
+    def add_candidate(id_a, id_b, reason, confidence):
+        pair = tuple(sorted([id_a, id_b]))
+        if pair in seen_pairs:
+            return
+        seen_pairs.add(pair)
 
-    for a, b in combinations(valid, 2):
-        if a['id'] == b['id']:
-            continue
-        comparisons += 1
-        score, reasons = similarity_score(a, b, details)
-        if score >= 0.65:  # threshold
-            pair = tuple(sorted([a['id'], b['id']]))
-            if pair not in known_pairs:
-                pr_a, pr_b = a.get('price_eur', 0), b.get('price_eur', 0)
-                price_diff_pct = round((pr_b - pr_a) / pr_a * 100, 1) if pr_a else 0
-                # Determine which is newer (higher ID = more recent listing)
-                newer = b if b['id'] > a['id'] else a
-                older = a if b['id'] > a['id'] else b
-                candidates.append({
-                    'id_a': older['id'], 'id_b': newer['id'],
-                    'similarity': round(score, 2),
-                    'price_a': older.get('price_eur'), 'price_b': newer.get('price_eur'),
-                    'price_diff_pct': round((newer.get('price_eur',0) - older.get('price_eur',0)) / max(older.get('price_eur',1), 1) * 100, 1),
-                    'rooms': a.get('rooms'), 'size_m2': a.get('size_m2'),
-                    'neighborhood': a.get('neighborhood'),
-                    'reasons': reasons,
-                    'url_a': older.get('url'), 'url_b': newer.get('url'),
-                    'detected_at': str(date.today()),
-                })
-                known_pairs.add(pair)
+        la = next((l for l in listings if l['id'] == id_a), {})
+        lb = next((l for l in listings if l['id'] == id_b), {})
+        pr_a = la.get('price_eur', 0) or 0
+        pr_b = lb.get('price_eur', 0) or 0
+        price_diff = round((pr_b - pr_a) / pr_a * 100, 1) if pr_a else 0
 
-    all_relistings = existing + candidates
+        # Newer ID = more recent listing
+        older, newer = (la, lb) if id_a < id_b else (lb, la)
+
+        candidates.append({
+            'id_a': older['id'], 'id_b': newer['id'],
+            'confidence': confidence,
+            'reason': reason,
+            'price_a': older.get('price_eur'),
+            'price_b': newer.get('price_eur'),
+            'price_diff_pct': price_diff,
+            'rooms': la.get('rooms'),
+            'size_m2': la.get('size_m2'),
+            'neighborhood': la.get('neighborhood'),
+            'url_a': older.get('url'),
+            'url_b': newer.get('url'),
+            'detected_at': today,
+        })
+
+    # Pass 1: same address
+    for addr, ids in addr_map.items():
+        if len(ids) > 1:
+            for i in range(len(ids)):
+                for j in range(i+1, len(ids)):
+                    add_candidate(ids[i], ids[j], f'Same address: "{addr[:50]}"', 'HIGH')
+
+    # Pass 2: same description fingerprint
+    for fp, ids in desc_map.items():
+        if len(ids) > 1:
+            for i in range(len(ids)):
+                for j in range(i+1, len(ids)):
+                    add_candidate(ids[i], ids[j], f'Identical description: "{fp[:50]}..."', 'HIGH')
+
+    # Pass 3: structural match — only flag if rooms+size+neigh+price all match tightly
+    for key, items in struct_map.items():
+        if len(items) > 1:
+            for i in range(len(items)):
+                for j in range(i+1, len(items)):
+                    a, b = items[i], items[j]
+                    pr_a, pr_b = a['price'], b['price']
+                    if pr_a and pr_b:
+                        price_diff = abs(pr_a - pr_b) / max(pr_a, pr_b)
+                        if price_diff <= 0.10:  # within 10% price — very tight
+                            rooms, size_b, neigh = key
+                            add_candidate(
+                                a['id'], b['id'],
+                                f'Identical structure: {rooms} {size_b}m² €{pr_a}≈€{pr_b} in {neigh}',
+                                'MEDIUM'
+                            )
+
+    # Save
     with open(RELIST_FILE, 'w') as f:
-        json.dump(all_relistings, f, ensure_ascii=False, indent=2)
+        json.dump(candidates, f, ensure_ascii=False, indent=2)
 
-    print(f'✅ {comparisons} pairs checked | {len(candidates)} new potential re-listings found')
-    for c in candidates[:5]:
-        sign = '+' if c['price_diff_pct'] > 0 else ''
-        print(f"   {c['id_a']} → {c['id_b']} | sim={c['similarity']} | "
-              f"{sign}{c['price_diff_pct']}% price | {', '.join(c['reasons'][:2])}")
+    high = [c for c in candidates if c['confidence'] == 'HIGH']
+    med  = [c for c in candidates if c['confidence'] == 'MEDIUM']
 
-    # Telegram alert
-    if candidates and BOT_TOKEN:
+    print(f'✅ {len(candidates)} potential re-listings found')
+    print(f'   🔴 HIGH confidence (same address/description): {len(high)}')
+    print(f'   🟡 MEDIUM confidence (structural match):       {len(med)}')
+
+    if candidates:
+        print('\nTop findings:')
+        for c in sorted(candidates, key=lambda x: x['confidence'])[:8]:
+            diff = c['price_diff_pct']
+            sign = '+' if diff > 0 else ''
+            conf = '🔴' if c['confidence'] == 'HIGH' else '🟡'
+            print(f'  {conf} {c.get("rooms")} {c.get("size_m2")}m² | {sign}{diff}% | {c["reason"][:60]}')
+            print(f'      {c["url_a"]}')
+            print(f'      {c["url_b"]}')
+
+    # Telegram alert for high-confidence only
+    if high and BOT_TOKEN:
         import requests as req
-        lines = [f'🔁 *{len(candidates)} potential re-listings detected!*\n']
-        for c in candidates[:5]:
+        lines = [f'🔁 *{len(high)} confirmed re-listings found*\n']
+        for c in high[:5]:
             sign = '+' if c['price_diff_pct'] > 0 else ''
             lines.append(f'• {c.get("rooms")} {c.get("size_m2")}m² {c.get("neighborhood","")[:20]}')
-            lines.append(f'  Old: €{c["price_a"]} {c["url_a"]}')
-            lines.append(f'  New: €{c["price_b"]} ({sign}{c["price_diff_pct"]}%) {c["url_b"]}')
+            lines.append(f'  Old: €{c["price_a"]} → New: €{c["price_b"]} ({sign}{c["price_diff_pct"]}%)')
+            lines.append(f'  {c["reason"][:60]}')
         req.post(f'https://api.telegram.org/bot{BOT_TOKEN}/sendMessage',
             json={'chat_id': CHAT_ID, 'text': '\n'.join(lines),
                   'parse_mode': 'Markdown', 'disable_web_page_preview': True}, timeout=10)
 
-    return len(candidates)
+    return len(high), len(med)
 
 
 if __name__ == '__main__':

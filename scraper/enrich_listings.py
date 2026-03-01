@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Listings Enricher v7 — JBizz Assistant 🦞
-Scoring redesigned Feb 2026:
-  1. Condition/quality    0-25  (AI image score × 2.5)
-  2. Sun exposure         0-20  (verified via street bearing + description)
-  3. Zone desirability    0-15  (Pinhais da Foz → Other)
-  4. Practical features   0-18  (garage 2+ spaces, storage, balcony, elevator)
-  5. Floor level          0-8   (RC/1st=0, 2nd=3, 3rd=5, 4th+=7, top=8)
-  6. Space efficiency     0-7   (m²/room ratio)
-  7. Price value          0-7   (delta vs zone avg €/m²)
-  Bonus/penalty: sea view +3, owner direct +1, sea <0.5km +2, red flags -2 each
+Listings Enricher v8 — JBizz Assistant 🦞
+Scoring redesigned Mar 2026 — key changes from v7:
+  - Dynamic zone price medians (computed from actual listings, not manual)
+  - Image fallback reduced 10→5 (unknown ≠ neutral)
+  - Sun unknown reduced 8→4 (74 listings missing = was inflating scores)
+  - Garage points scaled by rarity not presence (77% have it → lower base bonus)
+  - Price value uses absolute €/m² vs zone median (more accurate than % delta)
+  - Freshness signal: 90+ days on market = likely problem → -2
+  - Size/value signal: extreme €/m² ratios penalised
+  - Sea view bonus gated behind walk time (view claims unverified without images)
+  - Space score normalised per room type (T2/T3 benchmarked separately)
 """
 
 import json
@@ -33,16 +34,7 @@ SHEET_URL      = 'https://docs.google.com/spreadsheets/d/1Ljk9s45BovbRfk1QIUGgGx
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
 
-ZONE_CONFIG = {
-    'pinhais da foz': 20.0, 'foz do douro': 21.0, 'nevogilde': 21.0, 'foz velha': 20.0,
-    'foz': 20.0, 'gondarém': 20.0, 'serralves': 18.5, 'pinheiro manso': 18.0,
-    'massarelos': 17.5, 'aldoar': 17.0, 'lordelo do ouro': 17.0, 'boavista': 18.0,
-    'bessa leite': 16.5, 'bessa': 16.5, 'aviz': 17.0, 'cristo rei': 15.0,
-    'cedofeita': 15.0, 'bonfim': 14.0, 'matosinhos': 14.0, 'paranhos': 13.0,
-    'ramalde': 13.5, 'campanhã': 11.0, 'default': 15.0,
-}
-
-# v7: Zone desirability scores (0-15)
+# Zone desirability (0-15) — Foz premium, lifestyle proximity
 ZONE_DESIRABILITY = {
     'pinhais da foz': 15, 'nevogilde': 15, 'foz do douro': 13, 'foz velha': 13,
     'foz': 13, 'gondarém': 11, 'serralves': 11, 'pinheiro manso': 10,
@@ -52,23 +44,38 @@ ZONE_DESIRABILITY = {
     'ramalde': 5, 'campanhã': 3, 'default': 5,
 }
 
+# Dynamic zone price medians computed from actual listings (updated at runtime)
+# These are fallback defaults — main() will compute live medians and pass them in
+ZONE_PRICE_MEDIANS = {
+    'pinhais da foz': 15.0, 'nevogilde': 17.4, 'foz do douro': 17.4, 'foz velha': 20.8,
+    'foz': 15.8, 'gondarém': 15.8, 'serralves': 16.5, 'pinheiro manso': 12.5,
+    'massarelos': 16.2, 'boavista': 15.6, 'aldoar': 14.0, 'lordelo do ouro': 14.0,
+    'bessa leite': 15.6, 'bessa': 15.6, 'aviz': 17.7, 'ramalde': 13.1,
+    'default': 14.0,
+}
+
 def load_json(path, default):
     try:
         with open(path, encoding='utf-8') as f: return json.load(f)
     except: return default
 
-def sun_score_v7(sun: str, description: str = '') -> int:
-    """0-20. South/SE = 20, E or W = 12, North = 0, unknown = 8"""
-    s = str(sun or '').lower()
-    d = str(description or '').lower()
-    combined = s + ' ' + d
-    if any(x in combined for x in ['sul', 'south', 'sul/nascente', 'nascente/sul', 'southeast', 'sse', 'se ', 'sudeste']): return 20
-    if any(x in combined for x in ['southwest', 'sudoeste', 'ssw']): return 18
-    if any(x in combined for x in ['nascente', 'east', 'oeste', 'west', 'poente', 'este']): return 12
-    if any(x in combined for x in ['norte', 'north']): return 0
-    return 8  # unknown → neutral
+def sun_score(sun: str, description: str = '', solar_direction: str = '') -> int:
+    """
+    0-20. South/SE = 20, SW = 18, E/W = 12, North = 0.
+    Unknown = 4 (reduced from 8 — 74/128 listings missing sun = was inflating scores).
+    Sources: description text, then GPT-5.1 solar_direction from photo shadows.
+    """
+    combined = ' '.join([str(sun or ''), str(description or ''), str(solar_direction or '')]).lower()
+    if any(x in combined for x in ['sul', 'south', 'sul/nascente', 'nascente/sul',
+                                     'southeast', 'sse', 'se ', 'sudeste']): return 20
+    if any(x in combined for x in ['southwest', 'sudoeste', 'ssw']):           return 18
+    if any(x in combined for x in ['nascente', 'east', 'oeste', 'west',
+                                     'poente', 'este']):                         return 12
+    if any(x in combined for x in ['norte', 'north']):                          return 0
+    return 4  # unknown — reduced from 8
 
-def floor_score_v7(floor_val) -> int:
+
+def floor_score(floor_val) -> int:
     """0-8. RC/1st=0, 2nd=3, 3rd=5, 4th+=7, penthouse=8"""
     s = str(floor_val or '').lower()
     if any(x in s for x in ['r/c', 'rc', 'rés', 'rez', 'ground', 'térreo']): return 0
@@ -80,80 +87,151 @@ def floor_score_v7(floor_val) -> int:
         if n >= 4: return 7
     except: pass
     if any(x in s for x in ['penthouse', 'último', 'cobertura', 'top']): return 8
-    return 2  # unknown floor → small default
+    return 2
 
-def calc_v7_score(e: dict) -> int:
+
+def compute_zone_medians(listings: list) -> dict:
+    """Compute live €/m² medians per zone from actual listings."""
+    import statistics
+    from collections import defaultdict
+    zone_prices = defaultdict(list)
+    for l in listings:
+        ppm = l.get('price_per_m2') or 0
+        if ppm <= 0:
+            continue
+        neigh = str(l.get('neighborhood', '')).lower()
+        zone = 'default'
+        for k in ZONE_DESIRABILITY.keys():
+            if k in neigh:
+                zone = k
+                break
+        zone_prices[zone].append(ppm)
+    medians = dict(ZONE_PRICE_MEDIANS)  # start with fallbacks
+    for zone, prices in zone_prices.items():
+        if len(prices) >= 2:
+            medians[zone] = statistics.median(prices)
+    return medians
+
+
+def calc_score_v8(e: dict, zone_medians: dict) -> int:
+    """
+    v8 Opportunity Score (0-100).
+
+    Key improvements over v7:
+    - Image fallback: 5pts (was 10) — unknown ≠ neutral
+    - Sun unknown: 4pts (was 8) — 74/128 missing → was inflating
+    - Garage: 77% of listings have it → scaled down (3pts base, 5 for 2+ spaces)
+    - Price value: uses live zone medians, not manual config
+    - Freshness: 90+ days on market = staleness penalty
+    - €/m² sanity check: extreme outliers penalised
+    - Sea view: bonus only if walk time ≤25min (nearby enough to matter)
+    """
     score = 0
 
-    # 1. CONDITION & QUALITY (0-25) — AI image score × 2.5, fallback 5
-    img_score = e.get('image_score')
-    if img_score:
-        score += min(25, float(img_score) * 2.5)
+    # ── 1. CONDITION & QUALITY (0-25) ────────────────────────────────────────
+    img = e.get('image_score')
+    if img:
+        score += min(25, float(img) * 2.5)
     else:
-        score += 10  # neutral fallback (no images analyzed yet)
+        score += 5  # v8: reduced from 10 — no photos = real uncertainty
 
-    # 2. SUN EXPOSURE (0-20)
-    score += sun_score_v7(e.get('sun_exposure', ''), e.get('condition_summary', ''))
+    # ── 2. SUN EXPOSURE (0-20) ───────────────────────────────────────────────
+    score += sun_score(
+        e.get('sun_exposure', ''),
+        e.get('condition_summary', ''),
+        e.get('solar_direction', ''),    # from GPT-5.1 photo analysis
+    )
 
-    # 3. ZONE DESIRABILITY (0-15)
+    # ── 3. ZONE DESIRABILITY (0-15) ──────────────────────────────────────────
     neigh = str(e.get('neighborhood', '')).lower()
-    zone_pts = ZONE_DESIRABILITY.get('default', 5)
+    zone_pts = ZONE_DESIRABILITY['default']
     for k, v in ZONE_DESIRABILITY.items():
         if k in neigh:
             zone_pts = v
             break
     score += zone_pts
 
-    # 4. PRACTICAL FEATURES (0-18)
+    # ── 4. PRACTICAL FEATURES (0-16) ─────────────────────────────────────────
+    # Garage: 77% of listings have it → base value is 3pts (was 5)
+    # 2+ spaces = real differentiator → 6pts
     spaces = e.get('parking_spaces', 0) or 0
-    if spaces >= 2:     score += 7  # 2+ spaces
-    elif e.get('has_garage'): score += 5  # 1 space
+    if spaces >= 2:          score += 6
+    elif e.get('has_garage'): score += 3
     if e.get('has_storage'):  score += 3
     if e.get('outdoor_space') and e['outdoor_space'] not in ('None', None, ''): score += 4
-    if e.get('elevator'):     score += 4
+    if e.get('elevator'):     score += 3
 
-    # 5. FLOOR LEVEL (0-8)
-    score += floor_score_v7(e.get('floor_level'))
+    # ── 5. FLOOR LEVEL (0-8) ─────────────────────────────────────────────────
+    score += floor_score(e.get('floor_level'))
 
-    # 6. SPACE EFFICIENCY (0-7)
-    spr = e.get('space_per_room_m2', 0) or 0
-    if spr >= 50:   score += 7
-    elif spr >= 40: score += 5
-    elif spr >= 30: score += 3
-    else:           score += 1
+    # ── 6. SPACE EFFICIENCY (0-7) ────────────────────────────────────────────
+    # Benchmarked per room type: T2 benchmark = 45m²/room, T3 = 40m²/room
+    spr   = e.get('space_per_room_m2', 0) or 0
+    rooms_str = str(e.get('rooms', '')).upper()
+    bench = 40 if 'T3' in rooms_str else 45  # T3 rooms should be large
+    if spr >= bench * 1.3:   score += 7
+    elif spr >= bench:        score += 5
+    elif spr >= bench * 0.8: score += 3
+    else:                     score += 1
 
-    # 7. PRICE VALUE (0-7)
-    delta_pct = e.get('price_delta_pct', 0) or 0  # negative = below avg = good
-    if delta_pct <= -10:  score += 7
-    elif delta_pct <= -5: score += 5
-    elif delta_pct <= 5:  score += 3
-    else:                 score += 1
+    # ── 7. PRICE VALUE (0-8) ─────────────────────────────────────────────────
+    # Use live zone medians instead of stale manual config
+    ppm = e.get('price_per_m2', 0) or 0
+    zone_median = zone_medians.get('default', 15.0)
+    for k in ZONE_DESIRABILITY.keys():
+        if k in neigh and k in zone_medians:
+            zone_median = zone_medians[k]
+            break
+    if ppm > 0 and zone_median > 0:
+        ratio = ppm / zone_median   # <1 = below median (good), >1 = above (bad)
+        if ratio <= 0.80:   score += 8   # ≥20% below zone median
+        elif ratio <= 0.90: score += 6
+        elif ratio <= 1.00: score += 4
+        elif ratio <= 1.10: score += 2
+        else:               score += 0   # overpriced for zone
 
-    # BONUSES
-    if e.get('sea_view'):                          score += 3
-    # Walk time to sea (replaces straight-line dist — accounts for Porto hills)
+    # ── BONUSES ───────────────────────────────────────────────────────────────
+    # Sea view — only count if actually close to sea (self-reported claims from afar)
     walk_min = e.get('walk_time_sea_min') or 0
     dist_km  = e.get('dist_to_sea_km', 9) or 9
+    if e.get('sea_view') and (walk_min <= 25 or (walk_min == 0 and dist_km <= 1.5)):
+        score += 3
+
+    # Walk proximity to sea
     if walk_min > 0:
-        if walk_min <= 8:   score += 2   # ≤8 min walk
-        elif walk_min <= 15: score += 1  # 8-15 min walk
-    elif dist_km < 0.5:     score += 2   # fallback to straight-line
-    # Elevation bonus — ground floor on a hill is fine; penalise extreme altitude
+        if walk_min <= 8:    score += 3  # walking distance
+        elif walk_min <= 15: score += 2
+        elif walk_min <= 25: score += 1
+    elif dist_km < 0.5:
+        score += 2  # straight-line fallback
+
+    # Elevation penalty
     elev = e.get('elevation_m') or 0
-    if elev > 80:  score -= 1  # very high up in Porto = long walk down
-    if e.get('owner_direct'):                      score += 1
-    if e.get('days_on_market', 0) > 60:            score += 1  # negotiable
+    if elev > 80: score -= 1
 
-    # School quality bonus (0-3)
-    s_score = e.get('school_score', 0) or 0
-    if s_score >= 8:   score += 3
-    elif s_score >= 6: score += 2
-    elif s_score >= 4: score += 1
+    # Owner direct (no agency fee)
+    if e.get('owner_direct'): score += 2
 
-    # Noise penalty (-5 to 0)
+    # ── SCHOOL QUALITY (0-3) ─────────────────────────────────────────────────
+    s_sc = e.get('school_score', 0) or 0
+    if s_sc >= 8:   score += 3
+    elif s_sc >= 6: score += 2
+    elif s_sc >= 4: score += 1
+
+    # ── NOISE PENALTY (-5 to 0) ──────────────────────────────────────────────
     score += e.get('noise_penalty', 0) or 0
 
-    # PENALTIES (red flags from AI)
+    # ── STALENESS PENALTY ────────────────────────────────────────────────────
+    dom = e.get('days_on_market', 0) or 0
+    if dom >= 90:   score -= 3   # 3+ months = likely overpriced or problem
+    elif dom >= 60: score -= 1   # 2 months = slightly stale
+
+    # ── €/m² SANITY CHECK ────────────────────────────────────────────────────
+    # Extreme value penalty: >2.5× zone median = seriously overpriced
+    if ppm > 0 and zone_median > 0 and ppm / zone_median > 2.5:
+        score -= 5
+
+    # ── AI RED FLAGS ─────────────────────────────────────────────────────────
     red = str(e.get('red_flags_visual') or '').lower()
     if red and red not in ('none', ''):
         bad = sum(1 for kw in ['damp', 'crack', 'mold', 'mould', 'dark', 'very small', 'noise'] if kw in red)
@@ -162,13 +240,27 @@ def calc_v7_score(e: dict) -> int:
     return int(min(100, max(0, score)))
 
 def main():
-    print('🦞 Listings Enricher v7')
+    print('🦞 Listings Enricher v8')
     listings   = load_json(LISTINGS_FILE, [])
     details    = {d['id']: d for d in load_json(DETAILS_FILE, [])}
     v_analysis = {k: v for k, v in load_json(IMAGE_FILE, {}).items()}
     geo_map    = {g['id']: g for g in load_json(GEO_FILE, [])}
     dom_map    = load_json(DOM_FILE, {})
     commerce_map = {c['id']: c for c in load_json(COMMERCE_FILE, [])}
+
+    # Compute live zone price medians for accurate price-value scoring
+    # First pass: calculate price_per_m2 for all listings
+    prelim = []
+    for l in listings:
+        det = details.get(l['id'], {})
+        area_util  = det.get('area_util')
+        area_bruta = det.get('area_bruta') or l.get('size_m2', 0)
+        size_ref   = area_util if area_util else area_bruta
+        price      = l.get('price_eur', 0)
+        ppm        = round(price / size_ref, 2) if size_ref else 0
+        prelim.append({**l, 'price_per_m2': ppm, 'neighborhood': l.get('neighborhood', '')})
+    zone_medians = compute_zone_medians(prelim)
+    print(f'   Zone medians computed from {len(prelim)} listings')
 
     enriched_all = []
     for i, l in enumerate(listings):
@@ -191,9 +283,10 @@ def main():
         # ── Price calculations ────────────────────────────────────────────────
         price_per_m2 = round(price / size_ref, 2) if size_ref else 0
         neigh = l.get('neighborhood', '').lower()
-        zone_avg = ZONE_CONFIG.get('default', 15.0)
-        for k, v in ZONE_CONFIG.items():
-            if k in neigh: zone_avg = v; break
+        zone_avg = zone_medians.get('default', 15.0)
+        for k in ZONE_DESIRABILITY.keys():
+            if k in neigh and k in zone_medians:
+                zone_avg = zone_medians[k]; break
         price_delta     = round(price_per_m2 - zone_avg, 2)
         price_delta_pct = round((price_per_m2 / zone_avg - 1) * 100, 1) if zone_avg else 0
 
@@ -280,7 +373,10 @@ def main():
         }
 
         # ── v7 score ──────────────────────────────────────────────────────────
-        e['opportunity_score'] = calc_v7_score(e)
+        # Also add solar_direction from image analysis
+        e['solar_direction'] = vis.get('solar_direction', '')
+
+        e['opportunity_score'] = calc_score_v8(e, zone_medians)
 
         enriched_all.append(e)
 

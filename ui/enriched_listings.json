@@ -10,8 +10,8 @@
     "area_util": null,
     "price_eur": 1850,
     "price_per_m2": 13.21,
-    "price_delta_zone": -4.79,
-    "price_delta_pct": -26.6,
+    "price_delta_zone": 0.71,
+    "price_delta_pct": 5.7,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -55,7 +55,8 @@
     "nearest_school_km": 1.23,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 56
+    "solar_direction": "",
+    "opportunity_score": 39
   },
   {
     "id": "34822639",
@@ -68,8 +69,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 10.64,
-    "price_delta_zone": -4.36,
-    "price_delta_pct": -29.1,
+    "price_delta_zone": -3.36,
+    "price_delta_pct": -24.0,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -113,7 +114,8 @@
     "nearest_school_km": 99.0,
     "noise_penalty": -3,
     "noise_sources": "primary road <150m (1 segments), tram line <300m",
-    "opportunity_score": 59
+    "solar_direction": "",
+    "opportunity_score": 52
   },
   {
     "id": "34832807",
@@ -126,8 +128,8 @@
     "area_util": null,
     "price_eur": 2350,
     "price_per_m2": 25.0,
-    "price_delta_zone": 4.0,
-    "price_delta_pct": 19.0,
+    "price_delta_zone": 7.64,
+    "price_delta_pct": 44.0,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -171,7 +173,8 @@
     "nearest_school_km": 99.0,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 50
+    "solar_direction": "",
+    "opportunity_score": 44
   },
   {
     "id": "34832075",
@@ -184,8 +187,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 22.0,
-    "price_delta_zone": 2.0,
-    "price_delta_pct": 10.0,
+    "price_delta_zone": 6.23,
+    "price_delta_pct": 39.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -229,7 +232,8 @@
     "nearest_school_km": 1.44,
     "noise_penalty": -2,
     "noise_sources": "primary road <150m (6 segments)",
-    "opportunity_score": 57
+    "solar_direction": "",
+    "opportunity_score": 43
   },
   {
     "id": "34523035",
@@ -242,8 +246,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 10.78,
-    "price_delta_zone": -5.72,
-    "price_delta_pct": -34.7,
+    "price_delta_zone": -4.79,
+    "price_delta_pct": -30.8,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -287,7 +291,8 @@
     "nearest_school_km": 0.28,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 62
+    "solar_direction": "",
+    "opportunity_score": 49
   },
   {
     "id": "34463733",
@@ -300,8 +305,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 19.83,
-    "price_delta_zone": -1.17,
-    "price_delta_pct": -5.6,
+    "price_delta_zone": 2.47,
+    "price_delta_pct": 14.2,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -345,7 +350,8 @@
     "nearest_school_km": 1.2,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 44
   },
   {
     "id": "34657082",
@@ -358,8 +364,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 17.69,
-    "price_delta_zone": -3.31,
-    "price_delta_pct": -15.8,
+    "price_delta_zone": 0.33,
+    "price_delta_pct": 1.9,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -403,7 +409,8 @@
     "nearest_school_km": 1.2,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 78
+    "solar_direction": "",
+    "opportunity_score": 62
   },
   {
     "id": "34186444",
@@ -416,8 +423,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 14.29,
-    "price_delta_zone": -6.71,
-    "price_delta_pct": -32.0,
+    "price_delta_zone": -3.07,
+    "price_delta_pct": -17.7,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -461,7 +468,8 @@
     "nearest_school_km": 1.2,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 58
+    "solar_direction": "",
+    "opportunity_score": 53
   },
   {
     "id": "34712291",
@@ -474,8 +482,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 14.29,
-    "price_delta_zone": -5.71,
-    "price_delta_pct": -28.6,
+    "price_delta_zone": -1.48,
+    "price_delta_pct": -9.4,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -519,7 +527,8 @@
     "nearest_school_km": 0.81,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 56
   },
   {
     "id": "34527490",
@@ -532,8 +541,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 24.04,
-    "price_delta_zone": 3.04,
-    "price_delta_pct": 14.5,
+    "price_delta_zone": 6.68,
+    "price_delta_pct": 38.5,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -577,7 +586,8 @@
     "nearest_school_km": 1.2,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 69
+    "solar_direction": "",
+    "opportunity_score": 61
   },
   {
     "id": "34791726",
@@ -590,8 +600,8 @@
     "area_util": null,
     "price_eur": 1750,
     "price_per_m2": 10.94,
-    "price_delta_zone": -2.56,
-    "price_delta_pct": -19.0,
+    "price_delta_zone": -2.2,
+    "price_delta_pct": -16.7,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -635,7 +645,8 @@
     "nearest_school_km": 1.17,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 52
+    "solar_direction": "",
+    "opportunity_score": 41
   },
   {
     "id": "34824520",
@@ -648,8 +659,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 13.33,
-    "price_delta_zone": -1.67,
-    "price_delta_pct": -11.1,
+    "price_delta_zone": -0.67,
+    "price_delta_pct": -4.8,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -693,7 +704,8 @@
     "nearest_school_km": 0.32,
     "noise_penalty": -2,
     "noise_sources": "primary road <150m (7 segments)",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 49
   },
   {
     "id": "34661122",
@@ -706,8 +718,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 20.0,
-    "price_delta_zone": 3.0,
-    "price_delta_pct": 17.6,
+    "price_delta_zone": 2.31,
+    "price_delta_pct": 13.1,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -751,7 +763,8 @@
     "nearest_school_km": 99.0,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 58
+    "solar_direction": "",
+    "opportunity_score": 48
   },
   {
     "id": "34811162",
@@ -764,8 +777,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 16.54,
-    "price_delta_zone": -0.46,
-    "price_delta_pct": -2.7,
+    "price_delta_zone": -1.15,
+    "price_delta_pct": -6.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -809,7 +822,8 @@
     "nearest_school_km": 99.0,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 69
+    "solar_direction": "",
+    "opportunity_score": 62
   },
   {
     "id": "34281647",
@@ -822,8 +836,8 @@
     "area_util": null,
     "price_eur": 2750,
     "price_per_m2": 17.86,
-    "price_delta_zone": -2.14,
-    "price_delta_pct": -10.7,
+    "price_delta_zone": 2.09,
+    "price_delta_pct": 13.3,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -867,7 +881,8 @@
     "nearest_school_km": 0.81,
     "noise_penalty": 0,
     "noise_sources": "None detected",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 49
   },
   {
     "id": "34470932",
@@ -880,8 +895,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 13.11,
-    "price_delta_zone": -7.89,
-    "price_delta_pct": -37.6,
+    "price_delta_zone": -4.25,
+    "price_delta_pct": -24.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -925,7 +940,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 75
+    "solar_direction": "",
+    "opportunity_score": 68
   },
   {
     "id": "34824493",
@@ -938,8 +954,8 @@
     "area_util": null,
     "price_eur": 2460,
     "price_per_m2": 13.82,
-    "price_delta_zone": -1.18,
-    "price_delta_pct": -7.9,
+    "price_delta_zone": -0.18,
+    "price_delta_pct": -1.3,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 0,
@@ -983,7 +999,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 64
+    "solar_direction": "",
+    "opportunity_score": 55
   },
   {
     "id": "34808280",
@@ -996,8 +1013,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 11.98,
-    "price_delta_zone": -1.52,
-    "price_delta_pct": -11.3,
+    "price_delta_zone": -1.15,
+    "price_delta_pct": -8.8,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -1041,7 +1058,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 48
+    "solar_direction": "",
+    "opportunity_score": 38
   },
   {
     "id": "34746712",
@@ -1054,8 +1072,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 22.32,
-    "price_delta_zone": 4.82,
-    "price_delta_pct": 27.5,
+    "price_delta_zone": 6.12,
+    "price_delta_pct": 37.7,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -1099,7 +1117,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 42
+    "solar_direction": "",
+    "opportunity_score": 30
   },
   {
     "id": "34675427",
@@ -1112,8 +1131,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 14.29,
-    "price_delta_zone": 0.79,
-    "price_delta_pct": 5.9,
+    "price_delta_zone": 1.15,
+    "price_delta_pct": 8.8,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1157,7 +1176,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 43
+    "solar_direction": "",
+    "opportunity_score": 37
   },
   {
     "id": "34488236",
@@ -1170,8 +1190,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 13.11,
-    "price_delta_zone": -1.89,
-    "price_delta_pct": -12.6,
+    "price_delta_zone": -0.89,
+    "price_delta_pct": -6.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1215,7 +1235,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 55
   },
   {
     "id": "31626221",
@@ -1228,8 +1249,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 15.0,
-    "price_delta_zone": -3.0,
-    "price_delta_pct": -16.7,
+    "price_delta_zone": 2.5,
+    "price_delta_pct": 20.0,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1273,7 +1294,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 45
   },
   {
     "id": "34094739",
@@ -1286,8 +1308,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 9.66,
-    "price_delta_zone": -5.34,
-    "price_delta_pct": -35.6,
+    "price_delta_zone": -4.34,
+    "price_delta_pct": -31.0,
     "wcs": null,
     "has_garage": false,
     "parking_spaces": 0,
@@ -1331,7 +1353,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 53
+    "solar_direction": "",
+    "opportunity_score": 55
   },
   {
     "id": "34649578",
@@ -1344,8 +1367,8 @@
     "area_util": null,
     "price_eur": 2950,
     "price_per_m2": 17.25,
-    "price_delta_zone": 2.25,
-    "price_delta_pct": 15.0,
+    "price_delta_zone": 3.25,
+    "price_delta_pct": 23.2,
     "wcs": null,
     "has_garage": false,
     "parking_spaces": 0,
@@ -1389,7 +1412,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 53
+    "solar_direction": "",
+    "opportunity_score": 47
   },
   {
     "id": "34525189",
@@ -1402,8 +1426,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 15.23,
-    "price_delta_zone": -4.77,
-    "price_delta_pct": -23.8,
+    "price_delta_zone": -0.54,
+    "price_delta_pct": -3.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1447,7 +1471,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 77
+    "solar_direction": "",
+    "opportunity_score": 67
   },
   {
     "id": "32350163",
@@ -1460,8 +1485,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 20.0,
-    "price_delta_zone": 5.0,
-    "price_delta_pct": 33.3,
+    "price_delta_zone": 6.0,
+    "price_delta_pct": 42.9,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -1505,7 +1530,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 46
+    "solar_direction": "",
+    "opportunity_score": 32
   },
   {
     "id": "32917781",
@@ -1518,8 +1544,8 @@
     "area_util": null,
     "price_eur": 1750,
     "price_per_m2": 18.42,
-    "price_delta_zone": 3.42,
-    "price_delta_pct": 22.8,
+    "price_delta_zone": 4.42,
+    "price_delta_pct": 31.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1563,7 +1589,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 34
+    "solar_direction": "",
+    "opportunity_score": 25
   },
   {
     "id": "34511653",
@@ -1576,8 +1603,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 19.83,
-    "price_delta_zone": -0.17,
-    "price_delta_pct": -0.9,
+    "price_delta_zone": 4.06,
+    "price_delta_pct": 25.7,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1621,7 +1648,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 70
+    "solar_direction": "",
+    "opportunity_score": 60
   },
   {
     "id": "34574100",
@@ -1634,8 +1662,8 @@
     "area_util": null,
     "price_eur": 2750,
     "price_per_m2": 22.54,
-    "price_delta_zone": 2.54,
-    "price_delta_pct": 12.7,
+    "price_delta_zone": 1.75,
+    "price_delta_pct": 8.4,
     "wcs": 3,
     "has_garage": false,
     "parking_spaces": 0,
@@ -1679,7 +1707,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 51
+    "solar_direction": "",
+    "opportunity_score": 48
   },
   {
     "id": "34637053",
@@ -1692,8 +1721,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 16.52,
-    "price_delta_zone": 1.52,
-    "price_delta_pct": 10.1,
+    "price_delta_zone": 2.52,
+    "price_delta_pct": 18.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1737,7 +1766,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 57
+    "solar_direction": "",
+    "opportunity_score": 48
   },
   {
     "id": "34632049",
@@ -1750,8 +1780,8 @@
     "area_util": 151.0,
     "price_eur": 2700,
     "price_per_m2": 17.88,
-    "price_delta_zone": 2.88,
-    "price_delta_pct": 19.2,
+    "price_delta_zone": 3.88,
+    "price_delta_pct": 27.7,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1795,7 +1825,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 73
+    "solar_direction": "",
+    "opportunity_score": 66
   },
   {
     "id": "34786317",
@@ -1808,8 +1839,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 15.58,
-    "price_delta_zone": -4.42,
-    "price_delta_pct": -22.1,
+    "price_delta_zone": -0.19,
+    "price_delta_pct": -1.2,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1853,7 +1884,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 77
+    "solar_direction": "",
+    "opportunity_score": 70
   },
   {
     "id": "34572672",
@@ -1866,8 +1898,8 @@
     "area_util": null,
     "price_eur": 1950,
     "price_per_m2": 15.0,
-    "price_delta_zone": -6.0,
-    "price_delta_pct": -28.6,
+    "price_delta_zone": -2.36,
+    "price_delta_pct": -13.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1911,7 +1943,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 57
   },
   {
     "id": "34502346",
@@ -1924,8 +1957,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 14.19,
-    "price_delta_zone": -0.81,
-    "price_delta_pct": -5.4,
+    "price_delta_zone": 0.19,
+    "price_delta_pct": 1.4,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -1969,7 +2002,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 78
+    "solar_direction": "",
+    "opportunity_score": 69
   },
   {
     "id": "34181980",
@@ -1982,8 +2016,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 16.36,
-    "price_delta_zone": -3.64,
-    "price_delta_pct": -18.2,
+    "price_delta_zone": 0.59,
+    "price_delta_pct": 3.7,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -2027,7 +2061,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34569946",
@@ -2040,8 +2075,8 @@
     "area_util": null,
     "price_eur": 2800,
     "price_per_m2": 14.97,
-    "price_delta_zone": -5.03,
-    "price_delta_pct": -25.1,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2085,7 +2120,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 87
+    "solar_direction": "",
+    "opportunity_score": 78
   },
   {
     "id": "34791696",
@@ -2098,8 +2134,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 17.69,
-    "price_delta_zone": 0.69,
-    "price_delta_pct": 4.1,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2143,7 +2179,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 64
   },
   {
     "id": "34370938",
@@ -2156,8 +2193,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 18.25,
-    "price_delta_zone": -2.75,
-    "price_delta_pct": -13.1,
+    "price_delta_zone": 0.89,
+    "price_delta_pct": 5.1,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2201,7 +2238,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 50
   },
   {
     "id": "34793066",
@@ -2214,8 +2252,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 10.56,
-    "price_delta_zone": -9.44,
-    "price_delta_pct": -47.2,
+    "price_delta_zone": -4.41,
+    "price_delta_pct": -29.5,
     "wcs": 1,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2259,7 +2297,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 68
+    "solar_direction": "",
+    "opportunity_score": 62
   },
   {
     "id": "34753577",
@@ -2272,8 +2311,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 15.93,
-    "price_delta_zone": -1.57,
-    "price_delta_pct": -9.0,
+    "price_delta_zone": -0.27,
+    "price_delta_pct": -1.7,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -2317,7 +2356,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 54
+    "solar_direction": "",
+    "opportunity_score": 47
   },
   {
     "id": "34079266",
@@ -2330,8 +2370,8 @@
     "area_util": null,
     "price_eur": 3000,
     "price_per_m2": 17.44,
-    "price_delta_zone": -3.56,
-    "price_delta_pct": -17.0,
+    "price_delta_zone": 0.08,
+    "price_delta_pct": 0.5,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2375,7 +2415,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 76
+    "solar_direction": "",
+    "opportunity_score": 66
   },
   {
     "id": "34620210",
@@ -2388,8 +2429,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 18.92,
-    "price_delta_zone": -2.08,
-    "price_delta_pct": -9.9,
+    "price_delta_zone": 1.56,
+    "price_delta_pct": 9.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2433,7 +2474,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 90
+    "solar_direction": "",
+    "opportunity_score": 82
   },
   {
     "id": "34823894",
@@ -2446,8 +2488,8 @@
     "area_util": null,
     "price_eur": 2350,
     "price_per_m2": 12.5,
-    "price_delta_zone": -2.5,
-    "price_delta_pct": -16.7,
+    "price_delta_zone": -1.5,
+    "price_delta_pct": -10.7,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -2491,6 +2533,7 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
+    "solar_direction": "",
     "opportunity_score": 66
   },
   {
@@ -2504,8 +2547,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 17.86,
-    "price_delta_zone": -2.14,
-    "price_delta_pct": -10.7,
+    "price_delta_zone": -2.93,
+    "price_delta_pct": -14.1,
     "wcs": 1,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2549,7 +2592,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 86
+    "solar_direction": "",
+    "opportunity_score": 83
   },
   {
     "id": "34802333",
@@ -2562,8 +2606,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 16.5,
-    "price_delta_zone": 0.0,
-    "price_delta_pct": 0.0,
+    "price_delta_zone": 2.38,
+    "price_delta_pct": 16.9,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2607,7 +2651,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 71
+    "solar_direction": "",
+    "opportunity_score": 65
   },
   {
     "id": "34719928",
@@ -2620,8 +2665,8 @@
     "area_util": null,
     "price_eur": 2250,
     "price_per_m2": 18.75,
-    "price_delta_zone": -2.25,
-    "price_delta_pct": -10.7,
+    "price_delta_zone": 1.39,
+    "price_delta_pct": 8.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2665,7 +2710,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 84
+    "solar_direction": "",
+    "opportunity_score": 75
   },
   {
     "id": "34579573",
@@ -2678,8 +2724,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 16.67,
-    "price_delta_zone": 0.17,
-    "price_delta_pct": 1.0,
+    "price_delta_zone": 1.1,
+    "price_delta_pct": 7.1,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2723,7 +2769,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 68
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34701475",
@@ -2736,8 +2783,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 18.45,
-    "price_delta_zone": 1.95,
-    "price_delta_pct": 11.8,
+    "price_delta_zone": 2.88,
+    "price_delta_pct": 18.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -2781,7 +2828,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 57
   },
   {
     "id": "33772405",
@@ -2794,8 +2842,8 @@
     "area_util": null,
     "price_eur": 2450,
     "price_per_m2": 10.21,
-    "price_delta_zone": -7.79,
-    "price_delta_pct": -43.3,
+    "price_delta_zone": -2.29,
+    "price_delta_pct": -18.3,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 2,
@@ -2839,7 +2887,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 85
+    "solar_direction": "",
+    "opportunity_score": 82
   },
   {
     "id": "33657328",
@@ -2852,8 +2901,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 16.52,
-    "price_delta_zone": 1.52,
-    "price_delta_pct": 10.1,
+    "price_delta_zone": 2.52,
+    "price_delta_pct": 18.0,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -2897,7 +2946,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 55
+    "solar_direction": "",
+    "opportunity_score": 54
   },
   {
     "id": "34591821",
@@ -2910,8 +2960,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 13.85,
-    "price_delta_zone": -6.15,
-    "price_delta_pct": -30.8,
+    "price_delta_zone": -1.92,
+    "price_delta_pct": -12.2,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -2955,7 +3005,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 80
+    "solar_direction": "",
+    "opportunity_score": 77
   },
   {
     "id": "33727654",
@@ -2968,8 +3019,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 13.75,
-    "price_delta_zone": -6.25,
-    "price_delta_pct": -31.2,
+    "price_delta_zone": -2.02,
+    "price_delta_pct": -12.8,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -3013,7 +3064,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 79
+    "solar_direction": "",
+    "opportunity_score": 78
   },
   {
     "id": "32809426",
@@ -3026,8 +3078,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 18.45,
-    "price_delta_zone": 0.95,
-    "price_delta_pct": 5.4,
+    "price_delta_zone": 2.25,
+    "price_delta_pct": 13.9,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3071,7 +3123,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 55
   },
   {
     "id": "34801123",
@@ -3084,8 +3137,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 13.11,
-    "price_delta_zone": -1.89,
-    "price_delta_pct": -12.6,
+    "price_delta_zone": -0.89,
+    "price_delta_pct": -6.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3129,7 +3182,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 70
+    "solar_direction": "",
+    "opportunity_score": 63
   },
   {
     "id": "34407551",
@@ -3142,8 +3196,8 @@
     "area_util": null,
     "price_eur": 2650,
     "price_per_m2": 17.21,
-    "price_delta_zone": -2.79,
-    "price_delta_pct": -13.9,
+    "price_delta_zone": 1.44,
+    "price_delta_pct": 9.1,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3187,7 +3241,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 70
+    "solar_direction": "",
+    "opportunity_score": 61
   },
   {
     "id": "34495846",
@@ -3200,8 +3255,8 @@
     "area_util": null,
     "price_eur": 2850,
     "price_per_m2": 13.97,
-    "price_delta_zone": -7.03,
-    "price_delta_pct": -33.5,
+    "price_delta_zone": -3.39,
+    "price_delta_pct": -19.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3245,7 +3300,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 83
+    "solar_direction": "",
+    "opportunity_score": 81
   },
   {
     "id": "34760302",
@@ -3258,8 +3314,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 16.5,
-    "price_delta_zone": -4.5,
-    "price_delta_pct": -21.4,
+    "price_delta_zone": -0.86,
+    "price_delta_pct": -5.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 2,
@@ -3303,7 +3359,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 82
+    "solar_direction": "",
+    "opportunity_score": 74
   },
   {
     "id": "34463684",
@@ -3316,8 +3373,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 13.2,
-    "price_delta_zone": -7.8,
-    "price_delta_pct": -37.1,
+    "price_delta_zone": -4.16,
+    "price_delta_pct": -24.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3361,7 +3418,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 90
+    "solar_direction": "",
+    "opportunity_score": 83
   },
   {
     "id": "34715054",
@@ -3374,8 +3432,8 @@
     "area_util": null,
     "price_eur": 2950,
     "price_per_m2": 19.03,
-    "price_delta_zone": -0.97,
-    "price_delta_pct": -4.8,
+    "price_delta_zone": -1.75,
+    "price_delta_pct": -8.4,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -3419,7 +3477,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 66
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34756994",
@@ -3432,8 +3491,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 11.62,
-    "price_delta_zone": -3.38,
-    "price_delta_pct": -22.5,
+    "price_delta_zone": -2.38,
+    "price_delta_pct": -17.0,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3477,7 +3536,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 53
   },
   {
     "id": "34410507",
@@ -3490,8 +3550,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 14.4,
-    "price_delta_zone": -6.6,
-    "price_delta_pct": -31.4,
+    "price_delta_zone": -2.96,
+    "price_delta_pct": -17.1,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3535,7 +3595,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 81
+    "solar_direction": "",
+    "opportunity_score": 77
   },
   {
     "id": "34780702",
@@ -3548,8 +3609,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 13.33,
-    "price_delta_zone": -7.67,
-    "price_delta_pct": -36.5,
+    "price_delta_zone": -4.03,
+    "price_delta_pct": -23.2,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3593,7 +3654,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 60
   },
   {
     "id": "34585053",
@@ -3606,8 +3668,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 12.88,
-    "price_delta_zone": -4.62,
-    "price_delta_pct": -26.4,
+    "price_delta_zone": -3.32,
+    "price_delta_pct": -20.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3651,7 +3713,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 83
+    "solar_direction": "",
+    "opportunity_score": 81
   },
   {
     "id": "34412533",
@@ -3664,8 +3727,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 8.95,
-    "price_delta_zone": -6.05,
-    "price_delta_pct": -40.3,
+    "price_delta_zone": -5.05,
+    "price_delta_pct": -36.1,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -3709,7 +3772,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 62
+    "solar_direction": "",
+    "opportunity_score": 63
   },
   {
     "id": "34075254",
@@ -3722,8 +3786,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 12.58,
-    "price_delta_zone": -8.42,
-    "price_delta_pct": -40.1,
+    "price_delta_zone": -4.78,
+    "price_delta_pct": -27.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3767,7 +3831,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 89
+    "solar_direction": "",
+    "opportunity_score": 85
   },
   {
     "id": "34422426",
@@ -3780,8 +3845,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 15.58,
-    "price_delta_zone": -5.42,
-    "price_delta_pct": -25.8,
+    "price_delta_zone": -1.78,
+    "price_delta_pct": -10.3,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3825,7 +3890,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 82
+    "solar_direction": "",
+    "opportunity_score": 76
   },
   {
     "id": "28930306",
@@ -3838,8 +3904,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 15.45,
-    "price_delta_zone": 0.45,
-    "price_delta_pct": 3.0,
+    "price_delta_zone": 1.45,
+    "price_delta_pct": 10.4,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -3883,7 +3949,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 53
+    "solar_direction": "",
+    "opportunity_score": 44
   },
   {
     "id": "34599652",
@@ -3896,8 +3963,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 20.0,
-    "price_delta_zone": -1.0,
-    "price_delta_pct": -4.8,
+    "price_delta_zone": 2.64,
+    "price_delta_pct": 15.2,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3941,7 +4008,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 67
+    "solar_direction": "",
+    "opportunity_score": 56
   },
   {
     "id": "34749672",
@@ -3954,8 +4022,8 @@
     "area_util": null,
     "price_eur": 1950,
     "price_per_m2": 15.6,
-    "price_delta_zone": 0.6,
-    "price_delta_pct": 4.0,
+    "price_delta_zone": 1.6,
+    "price_delta_pct": 11.4,
     "wcs": 1,
     "has_garage": true,
     "parking_spaces": 1,
@@ -3999,7 +4067,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 67
+    "solar_direction": "",
+    "opportunity_score": 63
   },
   {
     "id": "34459308",
@@ -4012,8 +4081,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 12.38,
-    "price_delta_zone": -7.62,
-    "price_delta_pct": -38.1,
+    "price_delta_zone": -3.39,
+    "price_delta_pct": -21.5,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4057,7 +4126,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 80
+    "solar_direction": "",
+    "opportunity_score": 75
   },
   {
     "id": "34821260",
@@ -4070,8 +4140,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 15.28,
-    "price_delta_zone": -4.72,
-    "price_delta_pct": -23.6,
+    "price_delta_zone": -0.49,
+    "price_delta_pct": -3.1,
     "wcs": null,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4115,7 +4185,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 62
   },
   {
     "id": "34805967",
@@ -4128,8 +4199,8 @@
     "area_util": null,
     "price_eur": 2390,
     "price_per_m2": 16.48,
-    "price_delta_zone": -1.02,
-    "price_delta_pct": -5.8,
+    "price_delta_zone": 0.28,
+    "price_delta_pct": 1.7,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4173,7 +4244,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 59
+    "solar_direction": "",
+    "opportunity_score": 52
   },
   {
     "id": "34731194",
@@ -4186,8 +4258,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 21.82,
-    "price_delta_zone": 0.82,
-    "price_delta_pct": 3.9,
+    "price_delta_zone": 4.46,
+    "price_delta_pct": 25.7,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4231,7 +4303,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 85
+    "solar_direction": "",
+    "opportunity_score": 79
   },
   {
     "id": "34806547",
@@ -4244,8 +4317,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 16.5,
-    "price_delta_zone": -2.0,
-    "price_delta_pct": -10.8,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4289,7 +4362,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 50
+    "solar_direction": "",
+    "opportunity_score": 41
   },
   {
     "id": "34805382",
@@ -4302,8 +4376,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 20.0,
-    "price_delta_zone": 6.5,
-    "price_delta_pct": 48.1,
+    "price_delta_zone": 6.87,
+    "price_delta_pct": 52.3,
     "wcs": null,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4347,7 +4421,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 29
+    "solar_direction": "",
+    "opportunity_score": 19
   },
   {
     "id": "34810219",
@@ -4360,8 +4435,8 @@
     "area_util": null,
     "price_eur": 2810,
     "price_per_m2": 46.83,
-    "price_delta_zone": 26.83,
-    "price_delta_pct": 134.1,
+    "price_delta_zone": 26.04,
+    "price_delta_pct": 125.3,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4405,7 +4480,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 49
+    "solar_direction": "",
+    "opportunity_score": 43
   },
   {
     "id": "34566057",
@@ -4418,8 +4494,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 15.32,
-    "price_delta_zone": -4.68,
-    "price_delta_pct": -23.4,
+    "price_delta_zone": -0.45,
+    "price_delta_pct": -2.9,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4463,7 +4539,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 84
+    "solar_direction": "",
+    "opportunity_score": 79
   },
   {
     "id": "34512923",
@@ -4476,8 +4553,8 @@
     "area_util": null,
     "price_eur": 2750,
     "price_per_m2": 22.36,
-    "price_delta_zone": 1.36,
-    "price_delta_pct": 6.5,
+    "price_delta_zone": 5.0,
+    "price_delta_pct": 28.8,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4521,7 +4598,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 60
   },
   {
     "id": "34720587",
@@ -4534,8 +4612,8 @@
     "area_util": null,
     "price_eur": 1750,
     "price_per_m2": 10.23,
-    "price_delta_zone": -9.77,
-    "price_delta_pct": -48.8,
+    "price_delta_zone": -5.54,
+    "price_delta_pct": -35.1,
     "wcs": 1,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4579,7 +4657,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 76
+    "solar_direction": "",
+    "opportunity_score": 77
   },
   {
     "id": "34764158",
@@ -4592,8 +4671,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 16.0,
-    "price_delta_zone": -5.0,
-    "price_delta_pct": -23.8,
+    "price_delta_zone": -1.36,
+    "price_delta_pct": -7.8,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4637,7 +4716,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 91
+    "solar_direction": "",
+    "opportunity_score": 86
   },
   {
     "id": "34770575",
@@ -4650,8 +4730,8 @@
     "area_util": null,
     "price_eur": 2140,
     "price_per_m2": 16.46,
-    "price_delta_zone": -3.54,
-    "price_delta_pct": -17.7,
+    "price_delta_zone": 0.69,
+    "price_delta_pct": 4.4,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4695,7 +4775,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 51
   },
   {
     "id": "33789385",
@@ -4708,8 +4789,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 11.79,
-    "price_delta_zone": -6.21,
-    "price_delta_pct": -34.5,
+    "price_delta_zone": -0.71,
+    "price_delta_pct": -5.7,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4753,7 +4834,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 68
+    "solar_direction": "",
+    "opportunity_score": 62
   },
   {
     "id": "34823105",
@@ -4766,8 +4848,8 @@
     "area_util": null,
     "price_eur": 3000,
     "price_per_m2": 22.06,
-    "price_delta_zone": 1.06,
-    "price_delta_pct": 5.0,
+    "price_delta_zone": 4.7,
+    "price_delta_pct": 27.1,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -4811,7 +4893,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 58
   },
   {
     "id": "34821090",
@@ -4824,8 +4907,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 13.09,
-    "price_delta_zone": -6.91,
-    "price_delta_pct": -34.6,
+    "price_delta_zone": -2.68,
+    "price_delta_pct": -17.0,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -4869,7 +4952,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 66
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34765536",
@@ -4882,8 +4966,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 14.29,
-    "price_delta_zone": -5.71,
-    "price_delta_pct": -28.6,
+    "price_delta_zone": -6.5,
+    "price_delta_pct": -31.2,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4927,7 +5011,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 89
+    "solar_direction": "",
+    "opportunity_score": 88
   },
   {
     "id": "31798219",
@@ -4940,8 +5025,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 19.47,
-    "price_delta_zone": -1.53,
-    "price_delta_pct": -7.3,
+    "price_delta_zone": 2.11,
+    "price_delta_pct": 12.2,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -4985,7 +5070,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 86
+    "solar_direction": "",
+    "opportunity_score": 73
   },
   {
     "id": "31739609",
@@ -4998,8 +5084,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 17.36,
-    "price_delta_zone": -3.64,
-    "price_delta_pct": -17.3,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5043,7 +5129,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 79
+    "solar_direction": "",
+    "opportunity_score": 73
   },
   {
     "id": "34717735",
@@ -5056,8 +5143,8 @@
     "area_util": null,
     "price_eur": 2000,
     "price_per_m2": 10.31,
-    "price_delta_zone": -4.69,
-    "price_delta_pct": -31.3,
+    "price_delta_zone": -3.69,
+    "price_delta_pct": -26.4,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5101,7 +5188,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 75
+    "solar_direction": "",
+    "opportunity_score": 73
   },
   {
     "id": "33809187",
@@ -5114,8 +5202,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 14.0,
-    "price_delta_zone": -1.0,
-    "price_delta_pct": -6.7,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 3,
     "has_garage": false,
     "parking_spaces": 0,
@@ -5159,7 +5247,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 60
   },
   {
     "id": "34827021",
@@ -5172,8 +5261,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 11.61,
-    "price_delta_zone": -3.39,
-    "price_delta_pct": -22.6,
+    "price_delta_zone": -2.39,
+    "price_delta_pct": -17.1,
     "wcs": 3,
     "has_garage": false,
     "parking_spaces": 0,
@@ -5217,7 +5306,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 51
+    "solar_direction": "",
+    "opportunity_score": 43
   },
   {
     "id": "34637517",
@@ -5230,8 +5320,8 @@
     "area_util": null,
     "price_eur": 1850,
     "price_per_m2": 16.82,
-    "price_delta_zone": -3.18,
-    "price_delta_pct": -15.9,
+    "price_delta_zone": -3.96,
+    "price_delta_pct": -19.1,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -5275,7 +5365,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 79
+    "solar_direction": "",
+    "opportunity_score": 70
   },
   {
     "id": "34574421",
@@ -5288,8 +5379,8 @@
     "area_util": null,
     "price_eur": 1750,
     "price_per_m2": 10.36,
-    "price_delta_zone": -6.14,
-    "price_delta_pct": -37.2,
+    "price_delta_zone": -3.76,
+    "price_delta_pct": -26.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5333,7 +5424,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34710142",
@@ -5346,8 +5438,8 @@
     "area_util": null,
     "price_eur": 2800,
     "price_per_m2": 21.71,
-    "price_delta_zone": 1.71,
-    "price_delta_pct": 8.6,
+    "price_delta_zone": 5.94,
+    "price_delta_pct": 37.7,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -5391,7 +5483,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 66
+    "solar_direction": "",
+    "opportunity_score": 61
   },
   {
     "id": "32749016",
@@ -5404,8 +5497,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 16.42,
-    "price_delta_zone": -4.58,
-    "price_delta_pct": -21.8,
+    "price_delta_zone": -0.94,
+    "price_delta_pct": -5.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5449,7 +5542,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 88
+    "solar_direction": "",
+    "opportunity_score": 79
   },
   {
     "id": "34815577",
@@ -5462,8 +5556,8 @@
     "area_util": null,
     "price_eur": 3000,
     "price_per_m2": 46.88,
-    "price_delta_zone": 28.38,
-    "price_delta_pct": 153.4,
+    "price_delta_zone": 30.38,
+    "price_delta_pct": 184.1,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -5507,7 +5601,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 45
+    "solar_direction": "",
+    "opportunity_score": 33
   },
   {
     "id": "34822245",
@@ -5520,8 +5615,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 11.88,
-    "price_delta_zone": -3.12,
-    "price_delta_pct": -20.8,
+    "price_delta_zone": -2.12,
+    "price_delta_pct": -15.1,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5565,7 +5660,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 73
+    "solar_direction": "",
+    "opportunity_score": 69
   },
   {
     "id": "31654833",
@@ -5578,8 +5674,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 16.13,
-    "price_delta_zone": -4.87,
-    "price_delta_pct": -23.2,
+    "price_delta_zone": -1.23,
+    "price_delta_pct": -7.1,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5623,7 +5719,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 80
+    "solar_direction": "",
+    "opportunity_score": 73
   },
   {
     "id": "33518343",
@@ -5636,8 +5733,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 13.82,
-    "price_delta_zone": -1.18,
-    "price_delta_pct": -7.9,
+    "price_delta_zone": -0.18,
+    "price_delta_pct": -1.3,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5681,7 +5778,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 58
+    "solar_direction": "",
+    "opportunity_score": 47
   },
   {
     "id": "34469003",
@@ -5694,8 +5792,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 15.33,
-    "price_delta_zone": -5.67,
-    "price_delta_pct": -27.0,
+    "price_delta_zone": -2.03,
+    "price_delta_pct": -11.7,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5739,7 +5837,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 75
+    "solar_direction": "",
+    "opportunity_score": 69
   },
   {
     "id": "30234828",
@@ -5752,8 +5851,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 20.91,
-    "price_delta_zone": 5.91,
-    "price_delta_pct": 39.4,
+    "price_delta_zone": 6.91,
+    "price_delta_pct": 49.4,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -5797,7 +5896,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 45
+    "solar_direction": "",
+    "opportunity_score": 37
   },
   {
     "id": "34678623",
@@ -5810,8 +5910,8 @@
     "area_util": null,
     "price_eur": 2299,
     "price_per_m2": 23.46,
-    "price_delta_zone": 8.46,
-    "price_delta_pct": 56.4,
+    "price_delta_zone": 9.46,
+    "price_delta_pct": 67.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5855,7 +5955,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 53
+    "solar_direction": "",
+    "opportunity_score": 50
   },
   {
     "id": "31835209",
@@ -5868,8 +5969,8 @@
     "area_util": null,
     "price_eur": 2400,
     "price_per_m2": 13.33,
-    "price_delta_zone": -1.67,
-    "price_delta_pct": -11.1,
+    "price_delta_zone": -0.67,
+    "price_delta_pct": -4.8,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5913,7 +6014,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 61
+    "solar_direction": "",
+    "opportunity_score": 56
   },
   {
     "id": "34791385",
@@ -5926,8 +6028,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 11.25,
-    "price_delta_zone": -3.75,
-    "price_delta_pct": -25.0,
+    "price_delta_zone": -2.75,
+    "price_delta_pct": -19.6,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -5971,7 +6073,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 66
+    "solar_direction": "",
+    "opportunity_score": 58
   },
   {
     "id": "34625729",
@@ -5984,8 +6087,8 @@
     "area_util": null,
     "price_eur": 2800,
     "price_per_m2": 14.66,
-    "price_delta_zone": -6.34,
-    "price_delta_pct": -30.2,
+    "price_delta_zone": -2.7,
+    "price_delta_pct": -15.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6029,7 +6132,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 76
+    "solar_direction": "",
+    "opportunity_score": 73
   },
   {
     "id": "34705039",
@@ -6042,8 +6146,8 @@
     "area_util": null,
     "price_eur": 1750,
     "price_per_m2": 7.68,
-    "price_delta_zone": -10.82,
-    "price_delta_pct": -58.5,
+    "price_delta_zone": -8.82,
+    "price_delta_pct": -53.5,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6087,7 +6191,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 84
+    "solar_direction": "",
+    "opportunity_score": 82
   },
   {
     "id": "34793606",
@@ -6100,8 +6205,8 @@
     "area_util": null,
     "price_eur": 2150,
     "price_per_m2": 17.77,
-    "price_delta_zone": -2.23,
-    "price_delta_pct": -11.2,
+    "price_delta_zone": 2.0,
+    "price_delta_pct": 12.7,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -6145,7 +6250,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 58
+    "solar_direction": "",
+    "opportunity_score": 40
   },
   {
     "id": "34809959",
@@ -6158,8 +6264,8 @@
     "area_util": null,
     "price_eur": 2600,
     "price_per_m2": 18.31,
-    "price_delta_zone": 3.31,
-    "price_delta_pct": 22.1,
+    "price_delta_zone": 4.31,
+    "price_delta_pct": 30.8,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 2,
@@ -6203,7 +6309,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 70
+    "solar_direction": "",
+    "opportunity_score": 68
   },
   {
     "id": "34763660",
@@ -6216,8 +6323,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 11.25,
-    "price_delta_zone": -6.25,
-    "price_delta_pct": -35.7,
+    "price_delta_zone": -4.95,
+    "price_delta_pct": -30.6,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6261,7 +6368,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 86
+    "solar_direction": "",
+    "opportunity_score": 84
   },
   {
     "id": "34712075",
@@ -6274,8 +6382,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 22.68,
-    "price_delta_zone": 7.68,
-    "price_delta_pct": 51.2,
+    "price_delta_zone": 8.68,
+    "price_delta_pct": 62.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6319,7 +6427,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 68
+    "solar_direction": "",
+    "opportunity_score": 65
   },
   {
     "id": "34661506",
@@ -6332,8 +6441,8 @@
     "area_util": null,
     "price_eur": 2100,
     "price_per_m2": 23.33,
-    "price_delta_zone": 3.33,
-    "price_delta_pct": 16.6,
+    "price_delta_zone": 2.54,
+    "price_delta_pct": 12.2,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -6377,6 +6486,7 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
+    "solar_direction": "",
     "opportunity_score": 65
   },
   {
@@ -6390,8 +6500,8 @@
     "area_util": null,
     "price_eur": 2800,
     "price_per_m2": 23.33,
-    "price_delta_zone": 6.83,
-    "price_delta_pct": 41.4,
+    "price_delta_zone": 9.21,
+    "price_delta_pct": 65.3,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6435,7 +6545,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 67
+    "solar_direction": "",
+    "opportunity_score": 64
   },
   {
     "id": "33485358",
@@ -6448,8 +6559,8 @@
     "area_util": null,
     "price_eur": 2950,
     "price_per_m2": 16.03,
-    "price_delta_zone": -3.97,
-    "price_delta_pct": -19.8,
+    "price_delta_zone": 0.26,
+    "price_delta_pct": 1.6,
     "wcs": 3,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6493,7 +6604,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 53
   },
   {
     "id": "34772210",
@@ -6506,8 +6618,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 18.89,
-    "price_delta_zone": -1.11,
-    "price_delta_pct": -5.5,
+    "price_delta_zone": 3.92,
+    "price_delta_pct": 26.2,
     "wcs": 1,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6551,7 +6663,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 73
+    "solar_direction": "",
+    "opportunity_score": 65
   },
   {
     "id": "32180957",
@@ -6564,8 +6677,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 14.66,
-    "price_delta_zone": -0.34,
-    "price_delta_pct": -2.3,
+    "price_delta_zone": 0.66,
+    "price_delta_pct": 4.7,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6609,7 +6722,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 48
+    "solar_direction": "",
+    "opportunity_score": 40
   },
   {
     "id": "34708201",
@@ -6622,8 +6736,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 20.18,
-    "price_delta_zone": -0.82,
-    "price_delta_pct": -3.9,
+    "price_delta_zone": 2.82,
+    "price_delta_pct": 16.2,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6667,7 +6781,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 76
+    "solar_direction": "",
+    "opportunity_score": 69
   },
   {
     "id": "34623522",
@@ -6680,8 +6795,8 @@
     "area_util": null,
     "price_eur": 1650,
     "price_per_m2": 16.5,
-    "price_delta_zone": -3.5,
-    "price_delta_pct": -17.5,
+    "price_delta_zone": 0.73,
+    "price_delta_pct": 4.6,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6725,7 +6840,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 47
   },
   {
     "id": "33773445",
@@ -6738,8 +6854,8 @@
     "area_util": null,
     "price_eur": 2350,
     "price_per_m2": 23.5,
-    "price_delta_zone": 3.5,
-    "price_delta_pct": 17.5,
+    "price_delta_zone": 2.71,
+    "price_delta_pct": 13.1,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6783,7 +6899,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 62
+    "solar_direction": "",
+    "opportunity_score": 53
   },
   {
     "id": "34480804",
@@ -6796,8 +6913,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 15.83,
-    "price_delta_zone": -4.17,
-    "price_delta_pct": -20.9,
+    "price_delta_zone": 0.06,
+    "price_delta_pct": 0.4,
     "wcs": 2,
     "has_garage": false,
     "parking_spaces": 0,
@@ -6841,7 +6958,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 51
+    "solar_direction": "",
+    "opportunity_score": 43
   },
   {
     "id": "33906475",
@@ -6854,8 +6972,8 @@
     "area_util": null,
     "price_eur": 2200,
     "price_per_m2": 15.71,
-    "price_delta_zone": -4.29,
-    "price_delta_pct": -21.4,
+    "price_delta_zone": -0.06,
+    "price_delta_pct": -0.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6899,7 +7017,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 65
+    "solar_direction": "",
+    "opportunity_score": 56
   },
   {
     "id": "34272548",
@@ -6912,8 +7031,8 @@
     "area_util": null,
     "price_eur": 1790,
     "price_per_m2": 15.57,
-    "price_delta_zone": -0.93,
-    "price_delta_pct": -5.6,
+    "price_delta_zone": 0.0,
+    "price_delta_pct": 0.0,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -6957,7 +7076,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 63
+    "solar_direction": "",
+    "opportunity_score": 59
   },
   {
     "id": "34183902",
@@ -6970,8 +7090,8 @@
     "area_util": null,
     "price_eur": 1700,
     "price_per_m2": 9.44,
-    "price_delta_zone": -7.06,
-    "price_delta_pct": -42.8,
+    "price_delta_zone": -6.13,
+    "price_delta_pct": -39.4,
     "wcs": 2,
     "has_garage": true,
     "parking_spaces": 1,
@@ -7015,7 +7135,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 60
+    "solar_direction": "",
+    "opportunity_score": 54
   },
   {
     "id": "34839945",
@@ -7028,8 +7149,8 @@
     "area_util": null,
     "price_eur": 1980,
     "price_per_m2": 13.2,
-    "price_delta_zone": -1.8,
-    "price_delta_pct": -12.0,
+    "price_delta_zone": -0.8,
+    "price_delta_pct": -5.7,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7073,7 +7194,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 73
+    "solar_direction": "",
+    "opportunity_score": 66
   },
   {
     "id": "34839931",
@@ -7086,8 +7208,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 27.17,
-    "price_delta_zone": 9.67,
-    "price_delta_pct": 55.3,
+    "price_delta_zone": 10.97,
+    "price_delta_pct": 67.7,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7131,7 +7253,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 52
+    "solar_direction": "",
+    "opportunity_score": 45
   },
   {
     "id": "34839616",
@@ -7144,8 +7267,8 @@
     "area_util": null,
     "price_eur": 2300,
     "price_per_m2": 11.73,
-    "price_delta_zone": -4.77,
-    "price_delta_pct": -28.9,
+    "price_delta_zone": -2.38,
+    "price_delta_pct": -16.9,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7189,7 +7312,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 55
+    "solar_direction": "",
+    "opportunity_score": 42
   },
   {
     "id": "34838268",
@@ -7202,8 +7326,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 17.59,
-    "price_delta_zone": -3.41,
-    "price_delta_pct": -16.2,
+    "price_delta_zone": 0.23,
+    "price_delta_pct": 1.3,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7247,7 +7371,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 69
+    "solar_direction": "",
+    "opportunity_score": 57
   },
   {
     "id": "34844336",
@@ -7260,8 +7385,8 @@
     "area_util": null,
     "price_eur": 1800,
     "price_per_m2": 13.85,
-    "price_delta_zone": -3.65,
-    "price_delta_pct": -20.9,
+    "price_delta_zone": -2.35,
+    "price_delta_pct": -14.5,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7305,7 +7430,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 57
+    "solar_direction": "",
+    "opportunity_score": 44
   },
   {
     "id": "34844182",
@@ -7318,8 +7444,8 @@
     "area_util": null,
     "price_eur": 1900,
     "price_per_m2": 15.2,
-    "price_delta_zone": 0.2,
-    "price_delta_pct": 1.3,
+    "price_delta_zone": 1.2,
+    "price_delta_pct": 8.6,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7363,7 +7489,8 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 55
+    "solar_direction": "",
+    "opportunity_score": 46
   },
   {
     "id": "34841616",
@@ -7376,8 +7503,8 @@
     "area_util": null,
     "price_eur": 2500,
     "price_per_m2": 15.62,
-    "price_delta_zone": 0.62,
-    "price_delta_pct": 4.1,
+    "price_delta_zone": 1.62,
+    "price_delta_pct": 11.6,
     "wcs": null,
     "has_garage": true,
     "parking_spaces": 0,
@@ -7421,6 +7548,7 @@
     "nearest_school_km": null,
     "noise_penalty": 0,
     "noise_sources": "",
-    "opportunity_score": 49
+    "solar_direction": "",
+    "opportunity_score": 34
   }
 ]
