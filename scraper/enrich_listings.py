@@ -144,10 +144,18 @@ def calc_v7_score(e: dict) -> int:
     if e.get('owner_direct'):                      score += 1
     if e.get('days_on_market', 0) > 60:            score += 1  # negotiable
 
+    # School quality bonus (0-3)
+    s_score = e.get('school_score', 0) or 0
+    if s_score >= 8:   score += 3
+    elif s_score >= 6: score += 2
+    elif s_score >= 4: score += 1
+
+    # Noise penalty (-5 to 0)
+    score += e.get('noise_penalty', 0) or 0
+
     # PENALTIES (red flags from AI)
     red = str(e.get('red_flags_visual') or '').lower()
     if red and red not in ('none', ''):
-        # Count significant flags: damp, cracks, dark, mold
         bad = sum(1 for kw in ['damp', 'crack', 'mold', 'mould', 'dark', 'very small', 'noise'] if kw in red)
         score -= bad * 2
 
@@ -207,12 +215,15 @@ def main():
         elif any(x in combined for x in ['varanda', 'balcony', 'balcão']): outdoor = 'Varanda'
         elif any(x in combined for x in ['jardim', 'garden', 'quintal', 'patio', 'pátio']): outdoor = 'Garden'
 
-        # Sun exposure — prefer description text over AI light assessment
+        # Sun exposure — prefer description text, fallback to GPT-5.1 solar_direction
         sun = ''
         for phrase in ['nascente/sul', 'sul/nascente', 'nascente e sul', 'sul e nascente',
-                       'sul', 'south', 'nascente', 'east', 'poente', 'west', 'norte', 'north']:
+                       'orientação sul', 'orientacao sul', 'sul', 'south', 'nascente',
+                       'east', 'poente', 'west', 'norte', 'north']:
             if phrase in combined:
                 sun = phrase; break
+        if not sun and vis.get('solar_direction') and vis['solar_direction'].lower() not in ('unknown', ''):
+            sun = vis['solar_direction'].lower()  # GPT-5.1 extracted from photo shadows
 
         # Floor — prefer ZenRows floor_num, fallback to listing floor string
         floor_raw = det.get('floor_num') or l.get('floor', '')
@@ -260,6 +271,12 @@ def main():
             'nearest_beach_km': com.get('nearest_beach_km'),
             'schools_1km': com.get('schools_1km', 0),
             'commerce_notes': com.get('commerce_notes', ''),
+            # School & noise (from enrich_noise_schools.py via geocoded.json)
+            'school_score':        geo.get('school_score'),
+            'nearest_good_school': geo.get('nearest_good_school', ''),
+            'nearest_school_km':   geo.get('nearest_school_km'),
+            'noise_penalty':       geo.get('noise_penalty', 0),
+            'noise_sources':       geo.get('noise_sources', ''),
         }
 
         # ── v7 score ──────────────────────────────────────────────────────────

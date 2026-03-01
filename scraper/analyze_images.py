@@ -51,6 +51,7 @@ def parse_resp(text: str) -> dict:
         'light': g('LIGHT', 'Average'),
         'red_flags': g('RED_FLAGS', 'None'),
         'area_impression': g('AREA_IMPRESSION', 'Adequate'),
+        'solar_direction': g('SOLAR_DIRECTION', 'Unknown'),
         'summary': g('SUMMARY', ''),
     }
 
@@ -87,6 +88,7 @@ FINISH: [Basic/Standard/Premium/Luxury]
 LIGHT: [Poor/Average/Good/Excellent]
 AREA_IMPRESSION: [Spacious/Adequate/Cramped - does it match claimed size or seem smaller?]
 RED_FLAGS: [specific issues: dated kitchen, small bathrooms, dark hallway, cheap fittings, etc — or None]
+SOLAR_DIRECTION: [based on shadow angles and light source direction in photos: South/Southeast/Southwest/East/West/North/Unknown]
 SUMMARY: [2 honest sentences a renter deciding whether to visit would find useful]'''}]
 
     for b in b64s:
