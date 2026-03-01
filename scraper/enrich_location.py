@@ -268,8 +268,41 @@ def supermarket_tier(name: str) -> int:
     return 2
 
 
+
+def enrich_one(g: dict, listings: dict, details: dict, commerce: dict) -> dict:
+    """Enrich a single listing — safe to run in thread pool."""
+    import copy
+    g = copy.deepcopy(g)
+    lid = g['id']
+    lat, lng = g['lat'], g['lng']
+    l   = listings.get(lid, {})
+    det = details.get(lid, {})
+    com = commerce.get(lid, {})
+
+    ov = overpass_all(lat, lng)
+    g.update(ov)
+
+    s_score, s_name, s_dist = school_score(lat, lng)
+    g['school_score']        = s_score
+    g['nearest_good_school'] = s_name
+    g['nearest_school_km']   = s_dist
+
+    desc = (det.get('full_description', '') or '') + ' ' + (l.get('description', '') or '')
+    tags = l.get('tags', '') or ''
+    sig  = extract_signals(desc, tags)
+    g.update(sig)
+    g['supermarket_tier'] = supermarket_tier(com.get('nearest_supermarket', ''))
+
+    return g
+
+
 def main():
-    print('📍 Location Enricher v2 (single-pass Overpass)')
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import threading
+
+    CONCURRENCY = 4  # 4 parallel — safe for Overpass public mirrors
+
+    print('📍 Location Enricher v3 (concurrent, 4 parallel)')
     print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M")}')
     print('=' * 55)
 
@@ -282,74 +315,59 @@ def main():
 
     geo_map = {g['id']: g for g in geo_list}
 
-    # Process anything missing any of the key enrichments
     to_enrich = [g for g in geo_list if g.get('lat') and
                  (g.get('noise_penalty') is None or g.get('parks_800m') is None or
                   g.get('school_score') is None or g.get('is_furnished') is None)]
 
-    print(f'📦 {len(to_enrich)} listings need enrichment\n')
+    total = len(to_enrich)
+    est   = max(1, total // CONCURRENCY) * 2  # rough minutes
+    print(f'📦 {total} listings need enrichment (~{est} min at {CONCURRENCY}x parallel)\n')
 
+    lock = threading.Lock()
     done = 0
-    for g in to_enrich:
-        lid = g['id']
-        lat, lng = g['lat'], g['lng']
-        l   = listings.get(lid, {})
-        det = details.get(lid, {})
 
-        print(f'  [{done+1:3d}/{len(to_enrich)}] {lid}', end=' | ', flush=True)
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
+        futures = {ex.submit(enrich_one, g, listings, details, commerce): g['id'] for g in to_enrich}
 
-        # 1. Overpass — all in one request
-        ov = overpass_all(lat, lng)
-        g.update(ov)
+        for future in as_completed(futures):
+            lid = futures[future]
+            try:
+                result = future.result()
+                with lock:
+                    geo_map[lid] = result
+                    if lid in commerce:
+                        for field in ['parks_800m','nearest_park','hospitals_3km','nearest_hospital',
+                                      'nearest_hospital_km','bus_stops_400m','noise_penalty','noise_sources',
+                                      'school_score','nearest_good_school','supermarket_tier',
+                                      'is_furnished','kitchen_equipped','has_suite','has_fireplace',
+                                      'has_ac','has_pool','has_concierge','double_glazing',
+                                      'renovation_year','description_bonus_pts']:
+                            commerce[lid][field] = result.get(field)
+                    done += 1
 
-        # 2. School score (pure math, no API)
-        s_score, s_name, s_dist = school_score(lat, lng)
-        g['school_score']        = s_score
-        g['nearest_good_school'] = s_name
-        g['nearest_school_km']   = s_dist
+                    flags = []
+                    if result.get('parks_800m', 0) > 0:            flags.append(f'🌳{result["parks_800m"]}')
+                    if result.get('bus_stops_400m', 0) > 0:         flags.append(f'🚌{result["bus_stops_400m"]}')
+                    if (result.get('noise_penalty') or 0) < 0:      flags.append(f'🔊{result["noise_penalty"]}')
+                    if result.get('school_score', 0) > 0:            flags.append(f'🏫{result["school_score"]}')
+                    if result.get('is_furnished'):                   flags.append('🛋️')
+                    if result.get('has_suite'):                      flags.append('🛁')
+                    if result.get('has_ac'):                         flags.append('❄️')
+                    if result.get('renovation_year'):                flags.append(f'🔨{result["renovation_year"]}')
+                    bonus = result.get('description_bonus_pts', 0)
+                    if bonus > 0: flags.append(f'+{bonus}pts')
+                    print(f'  [{done:3d}/{total}] {lid} {" ".join(flags) or "basic"}', flush=True)
 
-        # 3. Description signals
-        desc = (det.get('full_description', '') or '') + ' ' + (l.get('description', '') or '')
-        tags = l.get('tags', '') or ''
-        sig  = extract_signals(desc, tags)
-        g.update(sig)
+                    if done % 20 == 0:
+                        with open(GEO_FILE, 'w') as f:
+                            json.dump(list(geo_map.values()), f, ensure_ascii=False, indent=2)
+                        with open(COMMERCE_FILE, 'w') as f:
+                            json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
+                        print(f'  💾 Checkpoint ({done}/{total})', flush=True)
 
-        # 4. Supermarket tier
-        com = commerce.get(lid, {})
-        g['supermarket_tier'] = supermarket_tier(com.get('nearest_supermarket', ''))
-
-        # Update commerce map
-        if lid in commerce:
-            for field in ['parks_800m','nearest_park','hospitals_3km','nearest_hospital',
-                          'nearest_hospital_km','bus_stops_400m','noise_penalty','noise_sources',
-                          'school_score','nearest_good_school','supermarket_tier',
-                          'is_furnished','kitchen_equipped','has_suite','has_fireplace',
-                          'has_ac','has_pool','has_concierge','double_glazing',
-                          'renovation_year','description_bonus_pts']:
-                commerce[lid][field] = g.get(field)
-
-        done += 1
-        flags = []
-        if ov.get('parks_800m'):                flags.append(f'🌳{ov["parks_800m"]}')
-        if ov.get('bus_stops_400m'):             flags.append(f'🚌{ov["bus_stops_400m"]}')
-        if ov.get('hospitals_3km'):              flags.append(f'🏥{ov["hospitals_3km"]}')
-        if (ov.get('noise_penalty') or 0) < 0:  flags.append(f'🔊{ov["noise_penalty"]}')
-        if s_score > 0:                          flags.append(f'🏫{s_score}')
-        if sig.get('is_furnished'):              flags.append('🛋️furn')
-        if sig.get('has_suite'):                 flags.append('🛁suite')
-        if sig.get('has_ac'):                    flags.append('❄️ac')
-        if sig.get('renovation_year'):           flags.append(f'🔨{sig["renovation_year"]}')
-        if sig.get('description_bonus_pts', 0) > 0: flags.append(f'+{sig["description_bonus_pts"]}pts')
-        print(' '.join(flags) or 'basic')
-
-        if done % 15 == 0:
-            with open(GEO_FILE, 'w') as f:
-                json.dump(list(geo_map.values()), f, ensure_ascii=False, indent=2)
-            with open(COMMERCE_FILE, 'w') as f:
-                json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
-            print(f'  💾 Checkpoint ({done}/{len(to_enrich)})')
-
-        time.sleep(1.5)  # Overpass rate limit
+            except Exception as e:
+                with lock: done += 1
+                print(f'  ⚠️  [{done}/{total}] {lid}: {str(e)[:60]}', flush=True)
 
     # Final save
     with open(GEO_FILE, 'w') as f:
@@ -357,15 +375,16 @@ def main():
     with open(COMMERCE_FILE, 'w') as f:
         json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
 
-    print(f'\n✅ Done — {done} listings enriched')
-    print(f'   🏫 School scores:    {sum(1 for g in geo_map.values() if g.get("school_score",0) > 0)}')
-    print(f'   🔊 Noisy listings:   {sum(1 for g in geo_map.values() if (g.get("noise_penalty") or 0) < 0)}')
-    print(f'   🌳 Near park:        {sum(1 for g in geo_map.values() if g.get("parks_800m",0) > 0)}')
-    print(f'   🚌 Good bus access:  {sum(1 for g in geo_map.values() if g.get("bus_stops_400m",0) >= 4)}')
-    print(f'   🛋️  Furnished:        {sum(1 for g in geo_map.values() if g.get("is_furnished"))}')
-    print(f'   🛁 With suite:       {sum(1 for g in geo_map.values() if g.get("has_suite"))}')
-    print(f'   ❄️  AC:               {sum(1 for g in geo_map.values() if g.get("has_ac"))}')
-    print(f'   🔨 Renovation data:  {sum(1 for g in geo_map.values() if g.get("renovation_year"))}')
+    gv = list(geo_map.values())
+    print(f'\n✅ Done — {done}/{total} enriched')
+    print(f'   🏫 School:    {sum(1 for g in gv if g.get("school_score",0)>0)}')
+    print(f'   🔊 Noisy:     {sum(1 for g in gv if (g.get("noise_penalty") or 0)<0)}')
+    print(f'   🌳 Parks:     {sum(1 for g in gv if g.get("parks_800m",0)>0)}')
+    print(f'   🚌 Buses:     {sum(1 for g in gv if g.get("bus_stops_400m",0)>=4)}')
+    print(f'   🛋️  Furnished: {sum(1 for g in gv if g.get("is_furnished"))}')
+    print(f'   🛁 Suite:     {sum(1 for g in gv if g.get("has_suite"))}')
+    print(f'   ❄️  AC:        {sum(1 for g in gv if g.get("has_ac"))}')
+    print(f'   🔨 Reno:      {sum(1 for g in gv if g.get("renovation_year"))}')
 
 
 if __name__ == '__main__':
