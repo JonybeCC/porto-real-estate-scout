@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Porto Real Estate Scout 🦞</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  #sidebar { width: 360px; min-width: 320px; height: 100vh; display: flex; flex-direction: column; background: #1a1d27; border-right: 1px solid #2d3148; z-index: 1000; }
+
+  #sidebar-header { padding: 16px; border-bottom: 1px solid #2d3148; }
+  #sidebar-header h1 { font-size: 16px; font-weight: 700; color: #a78bfa; letter-spacing: 0.5px; }
+  #sidebar-header p { font-size: 11px; color: #64748b; margin-top: 3px; }
+
+  /* Filters */
+  #filters { padding: 12px 16px; border-bottom: 1px solid #2d3148; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .filter-group label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+  .filter-group select, .filter-group input { width: 100%; background: #0f1117; border: 1px solid #2d3148; color: #e2e8f0; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
+  .filter-group.full { grid-column: 1 / -1; }
+  #apply-filters { grid-column: 1 / -1; background: #7c3aed; border: none; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  #apply-filters:hover { background: #6d28d9; }
+
+  /* Stats bar */
+  #stats-bar { padding: 8px 16px; border-bottom: 1px solid #2d3148; font-size: 11px; color: #64748b; display: flex; gap: 12px; align-items: center; }
+  #stats-bar span { color: #a78bfa; font-weight: 600; }
+
+  /* Listing list */
+  #listing-list { flex: 1; overflow-y: auto; }
+  #listing-list::-webkit-scrollbar { width: 4px; }
+  #listing-list::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 2px; }
+
+  .listing-card { padding: 12px 16px; border-bottom: 1px solid #1e2235; cursor: pointer; transition: background 0.15s; }
+  .listing-card:hover { background: #1e2235; }
+  .listing-card.active { background: #1e2235; border-left: 3px solid #7c3aed; }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .card-score { font-size: 20px; font-weight: 800; line-height: 1; }
+  .score-green  { color: #10b981; }
+  .score-yellow { color: #f59e0b; }
+  .score-orange { color: #f97316; }
+  .score-red    { color: #ef4444; }
+
+  .card-rank { font-size: 10px; color: #64748b; text-align: right; }
+  .card-price { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+  .card-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+  .card-neighborhood { font-size: 12px; color: #7c9cd1; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+  .badge-sea   { background: #0e4f7a; color: #7dd3fc; }
+  .badge-garage { background: #1a3a1a; color: #86efac; }
+  .badge-storage { background: #2d2010; color: #fcd34d; }
+  .badge-sun   { background: #3d2a00; color: #fbbf24; }
+  .badge-school { background: #1e1a3d; color: #c4b5fd; }
+  .badge-noise { background: #3d1a1a; color: #fca5a5; }
+
+  /* ── Map ── */
+  #map { flex: 1; height: 100vh; }
+
+  /* ── Detail panel ── */
+  #detail-panel { position: absolute; bottom: 0; right: 0; width: 380px; max-height: 70vh; background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px 12px 0 0; z-index: 2000; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s ease; }
+  #detail-panel.open { transform: translateY(0); }
+  #detail-panel::-webkit-scrollbar { width: 4px; }
+  #detail-panel::-webkit-scrollbar-thumb { background: #2d3148; }
+
+  #detail-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; line-height: 1; }
+  #detail-close:hover { color: #e2e8f0; }
+
+  #detail-content { padding: 20px; }
+  .detail-photo { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 14px; background: #0f1117; }
+  .detail-photo-placeholder { width: 100%; height: 80px; background: #0f1117; border-radius: 8px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; color: #2d3148; font-size: 13px; }
+  .detail-score-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .detail-score-big { font-size: 36px; font-weight: 900; }
+  .detail-title { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+  .detail-sub { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .detail-field { background: #0f1117; border-radius: 6px; padding: 8px 10px; }
+  .detail-field-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .detail-field-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .detail-field-value.good { color: #10b981; }
+  .detail-field-value.bad  { color: #ef4444; }
+  .detail-section { margin-top: 12px; }
+  .detail-section-title { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .detail-text { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+  .detail-flags { font-size: 12px; color: #fca5a5; }
+  .detail-link { display: block; margin-top: 14px; text-align: center; background: #7c3aed; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
+  .detail-link:hover { background: #6d28d9; }
+
+  /* Score bar */
+  .score-breakdown { margin-top: 12px; }
+  .score-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .score-bar-label { font-size: 10px; color: #64748b; width: 100px; text-align: right; }
+  .score-bar-track { flex: 1; height: 6px; background: #0f1117; border-radius: 3px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 3px; background: #7c3aed; transition: width 0.5s; }
+  .score-bar-val { font-size: 10px; color: #94a3b8; width: 30px; text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>🦞 Porto Real Estate Scout</h1>
+    <p>Foz · Aldoar · Boavista · Pinheiro Manso</p>
+  </div>
+
+  <div id="filters">
+    <div class="filter-group">
+      <label>Min Score</label>
+      <input type="number" id="f-score" value="0" min="0" max="100" step="5">
+    </div>
+    <div class="filter-group">
+      <label>Max Price (€)</label>
+      <input type="number" id="f-price" value="3100" min="0" max="5000" step="100">
+    </div>
+    <div class="filter-group">
+      <label>Rooms</label>
+      <select id="f-rooms">
+        <option value="">All</option>
+        <option value="T2">T2</option>
+        <option value="T3">T3</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Garage</label>
+      <select id="f-garage">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Sea View</label>
+      <select id="f-seaview">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Sort By</label>
+      <select id="f-sort">
+        <option value="score">Score</option>
+        <option value="price_asc">Price ↑</option>
+        <option value="price_desc">Price ↓</option>
+        <option value="size">Size</option>
+      </select>
+    </div>
+    <button id="apply-filters">Apply Filters</button>
+  </div>
+
+  <div id="stats-bar">
+    Showing <span id="count-shown">—</span> of <span id="count-total">—</span> listings
+  </div>
+
+  <div id="listing-list"></div>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- Detail Panel -->
+<div id="detail-panel">
+  <button id="detail-close">✕</button>
+  <div id="detail-content"></div>
+</div>
+
+<script>
+// ── Map setup ──────────────────────────────────────────────────────────────
+const map = L.map('map', { center: [41.155, -8.655], zoom: 14 });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+}).addTo(map);
+
+let allListings = [];
+let markers = {};
+let activeId = null;
+
+// ── Score colour ───────────────────────────────────────────────────────────
+function scoreClass(s) {
+  if (s >= 80) return 'score-green';
+  if (s >= 70) return 'score-yellow';
+  if (s >= 60) return 'score-orange';
+  return 'score-red';
+}
+function scoreColor(s) {
+  if (s >= 80) return '#10b981';
+  if (s >= 70) return '#f59e0b';
+  if (s >= 60) return '#f97316';
+  return '#ef4444';
+}
+
+// ── Marker icon ────────────────────────────────────────────────────────────
+function makeIcon(score, active = false) {
+  const color = scoreColor(score);
+  const size  = active ? 36 : 28;
+  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="18" cy="18" r="16" fill="${color}" fill-opacity="0.9" stroke="white" stroke-width="${active ? 3 : 1.5}"/>
+    <text x="18" y="23" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="11" font-weight="800" fill="white">${score}</text>
+  </svg>`;
+  return L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+}
+
+// ── Filter & render ────────────────────────────────────────────────────────
+function getFilters() {
+  return {
+    minScore: parseInt(document.getElementById('f-score').value) || 0,
+    maxPrice: parseInt(document.getElementById('f-price').value) || 9999,
+    rooms:    document.getElementById('f-rooms').value,
+    garage:   document.getElementById('f-garage').value,
+    seaview:  document.getElementById('f-seaview').value,
+    sort:     document.getElementById('f-sort').value,
+  };
+}
+
+function applyFilters() {
+  const f = getFilters();
+  let filtered = allListings.filter(l => {
+    if ((l.opportunity_score || 0) < f.minScore)   return false;
+    if ((l.price_eur || 0) > f.maxPrice)            return false;
+    if (f.rooms && l.rooms !== f.rooms)             return false;
+    if (f.garage === 'yes' && !l.has_garage)        return false;
+    if (f.garage === 'no'  &&  l.has_garage)        return false;
+    if (f.seaview === 'yes' && !l.sea_view)         return false;
+    if (f.seaview === 'no'  &&  l.sea_view)         return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    if (f.sort === 'score')      return (b.opportunity_score||0) - (a.opportunity_score||0);
+    if (f.sort === 'price_asc')  return (a.price_eur||0) - (b.price_eur||0);
+    if (f.sort === 'price_desc') return (b.price_eur||0) - (a.price_eur||0);
+    if (f.sort === 'size')       return (b.size_m2||0) - (a.size_m2||0);
+    return 0;
+  });
+
+  renderList(filtered);
+  renderMarkers(filtered);
+  document.getElementById('count-shown').textContent = filtered.length;
+}
+
+function renderList(listings) {
+  const list = document.getElementById('listing-list');
+  list.innerHTML = '';
+  listings.forEach((l, idx) => {
+    const sc = l.opportunity_score || 0;
+    const div = document.createElement('div');
+    div.className = 'listing-card' + (l.id === activeId ? ' active' : '');
+    div.dataset.id = l.id;
+
+    const badges = [];
+    if (l.sea_view)   badges.push(`<span class="badge badge-sea">🌊 Sea View</span>`);
+    if (l.has_garage) badges.push(`<span class="badge badge-garage">🚗 Garage${l.parking_spaces > 1 ? ` ×${l.parking_spaces}` : ''}</span>`);
+    if (l.has_storage) badges.push(`<span class="badge badge-storage">📦 Storage</span>`);
+    if (l.sun_exposure && !['unknown',''].includes(l.sun_exposure.toLowerCase()))
+      badges.push(`<span class="badge badge-sun">☀️ ${l.sun_exposure}</span>`);
+    if ((l.school_score||0) >= 7)
+      badges.push(`<span class="badge badge-school">🏫 Good Schools</span>`);
+    if ((l.noise_penalty||0) < -1)
+      badges.push(`<span class="badge badge-noise">🔊 Noisy</span>`);
+
+    div.innerHTML = `
+      <div class="card-top">
+        <div class="card-score ${scoreClass(sc)}">${sc}</div>
+        <div class="card-rank">#${idx+1} · ${l.rooms || '?'}</div>
+      </div>
+      <div class="card-price">€${(l.price_eur||0).toLocaleString()}/mo · ${l.size_m2||'?'}m²</div>
+      <div class="card-meta">${l.walk_time_sea_min ? `🚶 ${l.walk_time_sea_min}min sea` : ''} ${l.elevation_m ? `· ${l.elevation_m}m alt` : ''}</div>
+      <div class="card-neighborhood">${l.neighborhood || ''}</div>
+      ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
+    `;
+    div.addEventListener('click', () => selectListing(l.id));
+    list.appendChild(div);
+  });
+}
+
+function renderMarkers(listings) {
+  // Remove old markers
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  listings.forEach(l => {
+    const lat = l.lat || l.dist_to_sea_km && null;
+    const lng = l.lng;
+    if (!lat || !lng) return;
+
+    const m = L.marker([lat, lng], { icon: makeIcon(l.opportunity_score || 0, l.id === activeId) })
+      .addTo(map)
+      .on('click', () => selectListing(l.id));
+    markers[l.id] = m;
+  });
+}
+
+// ── Select listing ─────────────────────────────────────────────────────────
+function selectListing(id) {
+  activeId = id;
+  const l = allListings.find(x => x.id === id);
+  if (!l) return;
+
+  // Update sidebar active state
+  document.querySelectorAll('.listing-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === id);
+  });
+
+  // Update marker icons
+  Object.entries(markers).forEach(([mid, m]) => {
+    m.setIcon(makeIcon(allListings.find(x=>x.id===mid)?.opportunity_score||0, mid === id));
+  });
+
+  // Pan map
+  if (l.lat && l.lng) map.panTo([l.lat, l.lng], { animate: true });
+
+  // Show detail panel
+  showDetail(l);
+}
+
+function showDetail(l) {
+  const sc = l.opportunity_score || 0;
+  const photo = l.photo_urls?.[0] || null;
+
+  const scoreBreakdown = [
+    ['Condition/Quality', Math.min(25, (l.image_score||0)*2.5), 25],
+    ['Sun Exposure',      sunScore(l.sun_exposure, l.image_summary), 20],
+    ['Zone',              l.opportunity_score > 0 ? Math.min(15, sc/6) : 0, 15],
+    ['Practical',         l.has_garage ? 5 : 0, 18],
+    ['Floor Level',       floorScore(l.floor_level), 8],
+    ['Space/Room',        spaceScore(l.space_per_room_m2), 7],
+    ['Price Value',       priceScore(l.price_delta_pct), 7],
+  ];
+
+  const html = `
+    ${photo
+      ? `<img class="detail-photo" src="${photo}" onerror="this.style.display='none'" loading="lazy">`
+      : `<div class="detail-photo-placeholder">No photos available</div>`}
+
+    <div class="detail-score-row">
+      <div class="detail-score-big ${scoreClass(sc)}">${sc}</div>
+      <div style="font-size:13px;color:#64748b">/ 100</div>
+      ${l.image_score ? `<div style="font-size:12px;color:#94a3b8;margin-left:auto">📸 ${l.image_score}/10</div>` : ''}
+    </div>
+
+    <div class="detail-title">${l.title || l.neighborhood || ''}</div>
+    <div class="detail-sub">${l.neighborhood || ''} · ${l.days_on_market ? l.days_on_market + ' days on market' : 'just listed'}</div>
+
+    <div class="detail-grid">
+      <div class="detail-field">
+        <div class="detail-field-label">Price</div>
+        <div class="detail-field-value">€${(l.price_eur||0).toLocaleString()}/mo</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Size</div>
+        <div class="detail-field-value">${l.size_m2||'?'}m² ${l.area_util ? `(útil ${l.area_util}m²)` : ''}</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Rooms / WCs</div>
+        <div class="detail-field-value">${l.rooms||'?'} · ${l.wcs||'?'} WC</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Floor</div>
+        <div class="detail-field-value">${l.floor_level || '?'}</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Walk to Sea</div>
+        <div class="detail-field-value ${(l.walk_time_sea_min||99) <= 10 ? 'good' : ''}">${l.walk_time_sea_min ? l.walk_time_sea_min + ' min' : l.dist_to_sea_km ? l.dist_to_sea_km + ' km' : '?'}</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Elevation</div>
+        <div class="detail-field-value">${l.elevation_m != null ? l.elevation_m + 'm' : '?'}</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">Sun</div>
+        <div class="detail-field-value ${['sul','south','southeast','se'].some(s => (l.sun_exposure||'').toLowerCase().includes(s)) ? 'good' : ''}">${l.sun_exposure || '?'}</div>
+      </div>
+      <div class="detail-field">
+        <div class="detail-field-label">€/m²</div>
+        <div class="detail-field-value ${(l.price_delta_pct||0) < -5 ? 'good' : (l.price_delta_pct||0) > 5 ? 'bad' : ''}">${l.price_per_m2 ? '€'+l.price_per_m2 : '?'} ${l.price_delta_pct != null ? '('+( l.price_delta_pct > 0 ? '+' : '')+l.price_delta_pct+'%)' : ''}</div>
+      </div>
+      ${l.nearest_supermarket_km != null ? `
+      <div class="detail-field">
+        <div class="detail-field-label">Supermarket</div>
+        <div class="detail-field-value">${l.nearest_supermarket_km}km</div>
+      </div>` : ''}
+      ${l.nearest_metro_km != null ? `
+      <div class="detail-field">
+        <div class="detail-field-label">Metro</div>
+        <div class="detail-field-value">${l.nearest_metro_km}km</div>
+      </div>` : ''}
+      ${l.school_score != null ? `
+      <div class="detail-field">
+        <div class="detail-field-label">School Score</div>
+        <div class="detail-field-value ${(l.school_score||0) >= 7 ? 'good' : ''}">${l.school_score || '—'}/10</div>
+      </div>` : ''}
+      ${l.noise_penalty != null ? `
+      <div class="detail-field">
+        <div class="detail-field-label">Noise</div>
+        <div class="detail-field-value ${(l.noise_penalty||0) < -1 ? 'bad' : 'good'}">${l.noise_penalty === 0 ? 'Quiet' : l.noise_penalty + ' pts'}</div>
+      </div>` : ''}
+    </div>
+
+    ${l.image_summary ? `
+    <div class="detail-section">
+      <div class="detail-section-title">AI Assessment</div>
+      <div class="detail-text">${l.image_summary}</div>
+    </div>` : ''}
+
+    ${l.red_flags_visual && l.red_flags_visual.toLowerCase() !== 'none' ? `
+    <div class="detail-section">
+      <div class="detail-section-title">⚠️ Red Flags</div>
+      <div class="detail-flags">${l.red_flags_visual}</div>
+    </div>` : ''}
+
+    ${l.noise_sources && l.noise_sources !== 'None detected' ? `
+    <div class="detail-section">
+      <div class="detail-section-title">🔊 Noise Sources</div>
+      <div class="detail-flags">${l.noise_sources}</div>
+    </div>` : ''}
+
+    ${l.nearest_good_school ? `
+    <div class="detail-section">
+      <div class="detail-section-title">🏫 Nearest Good School</div>
+      <div class="detail-text">${l.nearest_good_school}</div>
+    </div>` : ''}
+
+    <div class="score-breakdown detail-section">
+      <div class="detail-section-title">Score Breakdown</div>
+      ${scoreBreakdown.map(([label, val, max]) => `
+        <div class="score-bar-row">
+          <div class="score-bar-label">${label}</div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(val/max*100)}%"></div></div>
+          <div class="score-bar-val">${Math.round(val)}/${max}</div>
+        </div>`).join('')}
+    </div>
+
+    <a class="detail-link" href="${l.url}" target="_blank">View on Idealista →</a>
+  `;
+
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+// ── Score helper functions ─────────────────────────────────────────────────
+function sunScore(sun, summary) {
+  const s = ((sun||'') + ' ' + (summary||'')).toLowerCase();
+  if (['sul','south','southeast','se ','sudeste','sse'].some(x => s.includes(x))) return 20;
+  if (['southwest','sudoeste','ssw'].some(x => s.includes(x))) return 18;
+  if (['nascente','east','oeste','west','poente','este'].some(x => s.includes(x))) return 12;
+  if (['norte','north'].some(x => s.includes(x))) return 0;
+  return 8;
+}
+function floorScore(floor) {
+  const s = (floor||'').toLowerCase();
+  if (['r/c','rc','rés','rez','ground'].some(x => s.includes(x))) return 0;
+  const m = s.match(/\d+/);
+  if (m) { const n=parseInt(m[0]); if(n<=1) return 0; if(n==2) return 3; if(n==3) return 5; return 7; }
+  return 2;
+}
+function spaceScore(spr) {
+  if (!spr) return 1;
+  if (spr >= 50) return 7;
+  if (spr >= 40) return 5;
+  if (spr >= 30) return 3;
+  return 1;
+}
+function priceScore(delta) {
+  if (delta == null) return 3;
+  if (delta <= -10) return 7;
+  if (delta <= -5)  return 5;
+  if (delta <= 5)   return 3;
+  return 1;
+}
+
+// ── Close detail panel ─────────────────────────────────────────────────────
+document.getElementById('detail-close').addEventListener('click', () => {
+  document.getElementById('detail-panel').classList.remove('open');
+  activeId = null;
+  document.querySelectorAll('.listing-card').forEach(c => c.classList.remove('active'));
+  Object.entries(markers).forEach(([mid, m]) => {
+    m.setIcon(makeIcon(allListings.find(x=>x.id===mid)?.opportunity_score||0, false));
+  });
+});
+
+// ── Filter button ──────────────────────────────────────────────────────────
+document.getElementById('apply-filters').addEventListener('click', applyFilters);
+['f-sort', 'f-rooms', 'f-garage', 'f-seaview'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+// ── Load data ──────────────────────────────────────────────────────────────
+fetch('enriched_listings.json')
+  .then(r => r.json())
+  .then(data => {
+    allListings = data;
+    document.getElementById('count-total').textContent = data.length;
+    applyFilters();
+  })
+  .catch(err => {
+    document.getElementById('listing-list').innerHTML =
+      `<div style="padding:20px;color:#ef4444;font-size:13px">
+        Failed to load listings.<br>
+        Run a local server: <code>python3 -m http.server 8080</code><br>
+        Then open <a href="http://localhost:8080" style="color:#7c3aed">localhost:8080</a>
+      </div>`;
+  });
+</script>
+</body>
+</html>
