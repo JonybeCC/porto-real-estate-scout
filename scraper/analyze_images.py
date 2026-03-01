@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Iterative Image Analyzer v3 — JBizz Assistant 🦞
-Analyzes listing photos with GPT-5.1 vision (upgraded from GPT-4o).
-- Deeper analysis: gauges actual room sizes vs claimed m², detects faked angles
-- Min 5 images before any stop condition
-- Stops when score stabilizes ±1 at medium/high confidence, or 3 identical rounds
-- Max 10 images (hard cap)
-- Batches: 3, 3, 2, 2
+Iterative Image Analyzer v4 — JBizz Assistant 🦞
+Analyzes listing photos with GPT-5.1 vision.
+- Default mode: stops when score stabilises (min 5, max 10 photos)
+- Full mode (--full): analyses ALL available photos, no early stop
+  Run with: python3 analyze_images.py --full
+  Or re-analyse specific listing: python3 analyze_images.py --full --id 34809959
 """
 
 import json, os, base64, re, requests, time
@@ -102,16 +101,27 @@ SUMMARY: [2 honest sentences a renter deciding whether to visit would find usefu
     return parse_resp(resp.choices[0].message.content.strip())
 
 
-def analyze_listing(lid: str, photo_urls: list, info: str) -> dict | None:
+def analyze_listing(lid: str, photo_urls: list, info: str, full_mode: bool = False) -> dict | None:
     # Use blur/WEB_DETAIL photos — they're proper full-resolution detail images
     real = [u for u in photo_urls if u.startswith('http')]
     if not real:
         return None
 
-    MIN, MAX = 5, 10
-    BATCH_SIZES = [3, 3, 2, 2]
+    if full_mode:
+        MIN = 1
+        MAX = len(real)  # analyse ALL photos
+        # Larger batches in full mode for efficiency
+        n = len(real)
+        BATCH_SIZES = []
+        while n > 0:
+            b = min(4, n)
+            BATCH_SIZES.append(b)
+            n -= b
+    else:
+        MIN, MAX = 5, 10
+        BATCH_SIZES = [3, 3, 2, 2]
 
-    print(f'    {len(real)} photos available (min:{MIN} max:{MAX})')
+    print(f'    {len(real)} photos available | mode={"FULL" if full_mode else f"adaptive min:{MIN} max:{MAX}"}')
 
     rounds, all_rooms, used, idx = [], [], 0, 0
 
@@ -137,8 +147,8 @@ def analyze_listing(lid: str, photo_urls: list, info: str) -> dict | None:
         print(f'    Round {len(rounds)}: {len(b64s)}imgs → score={res["score"]} '
               f'conf={res["confidence"]} | {res["rooms_visible"][:60]}')
 
-        # Stop conditions — only after MIN images
-        if used >= MIN:
+        # Stop conditions — only in adaptive mode, only after MIN images
+        if not full_mode and used >= MIN:
             if res['confidence'] == 'high' and not res['requires_more']:
                 print(f'    → Stop: high confidence ({used} imgs)')
                 break
@@ -167,8 +177,16 @@ def analyze_listing(lid: str, photo_urls: list, info: str) -> dict | None:
 
 
 def main():
+    import sys
     from datetime import datetime
-    print('🦞 Image Analyzer v2')
+
+    full_mode  = '--full' in sys.argv
+    force_ids  = set()
+    if '--id' in sys.argv:
+        idx = sys.argv.index('--id')
+        force_ids = {sys.argv[idx+1]} if idx+1 < len(sys.argv) else set()
+
+    print(f'🦞 Image Analyzer v4 — {"FULL MODE (all photos)" if full_mode else "adaptive mode"}')
     print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M")}')
     print('=' * 55)
 
@@ -181,15 +199,20 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         existing = {}
 
-    # Analyze listings that have photos — try photo_urls first, fallback to unblurred_photos
     to_do = {}
     for lid, d in details.items():
-        if lid in existing:
-            continue
+        # In full mode, re-analyse everything (or just forced IDs)
+        if full_mode:
+            if force_ids and lid not in force_ids:
+                continue
+        else:
+            if lid in existing and lid not in force_ids:
+                continue
         photos = d.get('photo_urls') or d.get('unblurred_photos')
         if photos:
             to_do[lid] = {**d, '_photos_to_use': photos}
-    print(f'📦 {len(to_do)} listings with photos to analyze\n')
+
+    print(f'📦 {len(to_do)} listings to analyze {"(full re-scan)" if full_mode else "(new only)"}\n')
 
     total_imgs = 0
     for i, (lid, detail) in enumerate(to_do.items(), 1):
@@ -198,7 +221,7 @@ def main():
         info = f'ID:{lid}'
 
         print(f'\n[{i:3d}/{len(to_do)}] {lid}')
-        result = analyze_listing(lid, photos, info)
+        result = analyze_listing(lid, photos, info, full_mode=full_mode)
 
         if result:
             existing[lid] = result
