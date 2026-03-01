@@ -221,13 +221,53 @@ def calc_score_v8(e: dict, zone_medians: dict) -> int:
     # ── NOISE PENALTY (-5 to 0) ──────────────────────────────────────────────
     score += e.get('noise_penalty', 0) or 0
 
-    # ── STALENESS PENALTY ────────────────────────────────────────────────────
+    # ── DESCRIPTION SIGNALS (furnished, suite, AC, renovation, etc.) ─────────
+    score += min(12, e.get('description_bonus_pts', 0) or 0)
+
+    # ── LIFESTYLE AMENITIES (parks, hospitals, bus) ───────────────────────────
+    # Park proximity
+    parks = e.get('parks_800m', 0) or 0
+    if parks >= 2:  score += 2
+    elif parks >= 1: score += 1
+
+    # Hospital/clinic within 2km
+    hosp_km = e.get('nearest_hospital_km') or 99
+    if hosp_km <= 1.0:   score += 2
+    elif hosp_km <= 2.0: score += 1
+
+    # Bus connectivity
+    buses = e.get('bus_stops_400m', 0) or 0
+    if buses >= 8:   score += 3
+    elif buses >= 4: score += 2
+    elif buses >= 2: score += 1
+
+    # Supermarket tier bonus (premium supermarket = nicer neighbourhood)
+    tier = e.get('supermarket_tier', 2) or 2
+    if tier == 3: score += 2
+    elif tier == 1: score -= 1
+
+    # Restaurant / café density (already in commerce)
+    resto = e.get('restaurants_300m', 0) or 0
+    if resto >= 6:   score += 2
+    elif resto >= 3: score += 1
+
+    # Pharmacy very close
+    pharm_km = e.get('nearest_pharmacy_km') or 99
+    if pharm_km <= 0.2: score += 1
+
+    # ── BUILDING FACADE SCORE (Mapillary + GPT-5.1, if available) ────────────
+    facade = e.get('facade_score')
+    if facade:
+        if facade >= 8:   score += 4
+        elif facade >= 6: score += 2
+        elif facade <= 3: score -= 3
+
+    # ── STALENESS PENALTY (rentals move fast — 30d+ is a red flag) ──────────
     dom = e.get('days_on_market', 0) or 0
-    if dom >= 90:   score -= 3   # 3+ months = likely overpriced or problem
-    elif dom >= 60: score -= 1   # 2 months = slightly stale
+    if dom >= 60:   score -= 4
+    elif dom >= 30: score -= 2
 
     # ── €/m² SANITY CHECK ────────────────────────────────────────────────────
-    # Extreme value penalty: >2.5× zone median = seriously overpriced
     if ppm > 0 and zone_median > 0 and ppm / zone_median > 2.5:
         score -= 5
 
@@ -364,12 +404,37 @@ def main():
             'nearest_beach_km': com.get('nearest_beach_km'),
             'schools_1km': com.get('schools_1km', 0),
             'commerce_notes': com.get('commerce_notes', ''),
-            # School & noise (from enrich_noise_schools.py via geocoded.json)
+            # School & noise
             'school_score':        geo.get('school_score'),
             'nearest_good_school': geo.get('nearest_good_school', ''),
             'nearest_school_km':   geo.get('nearest_school_km'),
             'noise_penalty':       geo.get('noise_penalty', 0),
             'noise_sources':       geo.get('noise_sources', ''),
+            # Advanced enrichment (enrich_advanced.py)
+            'parks_800m':           geo.get('parks_800m', 0),
+            'nearest_park':         geo.get('nearest_park', ''),
+            'hospitals_3km':        geo.get('hospitals_3km', 0),
+            'nearest_hospital':     geo.get('nearest_hospital', ''),
+            'nearest_hospital_km':  geo.get('nearest_hospital_km'),
+            'bus_stops_400m':       geo.get('bus_stops_400m', 0),
+            'supermarket_tier':     geo.get('supermarket_tier', 2),
+            # Description signals
+            'is_furnished':         geo.get('is_furnished', False),
+            'kitchen_equipped':     geo.get('kitchen_equipped', False),
+            'has_suite':            geo.get('has_suite', False),
+            'has_fireplace':        geo.get('has_fireplace', False),
+            'has_ac':               geo.get('has_ac', False),
+            'has_pool':             geo.get('has_pool', False),
+            'has_concierge':        geo.get('has_concierge', False),
+            'double_glazing':       geo.get('double_glazing', False),
+            'renovation_year':      geo.get('renovation_year'),
+            'description_bonus_pts': geo.get('description_bonus_pts', 0),
+            'light_mentioned':      geo.get('light_mentioned', False),
+            # Street view facade
+            'facade_score':         geo.get('facade_score'),
+            'building_condition':   geo.get('building_condition', ''),
+            'street_quality':       geo.get('street_quality', ''),
+            'facade_notes':         geo.get('facade_notes', ''),
         }
 
         # ── v7 score ──────────────────────────────────────────────────────────
