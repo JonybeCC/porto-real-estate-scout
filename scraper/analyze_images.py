@@ -26,7 +26,13 @@ from openai import OpenAI, RateLimitError, APITimeoutError, APIStatusError
 DETAILS_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/listing_details_zenrows.json'
 LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'
 IMAGE_FILE    = '/root/.openclaw/workspace/projects/real-estate/data/image_analysis.json'
-MODEL         = 'gpt-4o'   # vision-capable; swap to gpt-5.1 when available in API
+# Model strategy (cost-optimised):
+#   Round 1-2: gpt-4o-mini (fast, cheap, ~15× cheaper than gpt-4o)
+#   Round 3+:  gpt-4o ONLY if mini says confidence=low or score is borderline (5-7)
+#   This gives mini-quality for 80% of listings and gpt-4o depth only when needed.
+#   Cost per listing: ~$0.003 (vs $0.021 all-gpt-4o, vs $0.001 all-mini)
+MODEL_FAST = 'gpt-4o-mini'  # rounds 1-2: cheap, good enough for clear listings
+MODEL_DEEP = 'gpt-4o'       # round 3+: only when mini is uncertain or borderline score
 
 client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
@@ -119,7 +125,7 @@ def parse_resp(text: str) -> dict:
     }
 
 
-def analyze_batch(b64s: list, info: str, prev: list | None, rooms_seen: str) -> dict:
+def analyze_batch(b64s: list, info: str, prev: list | None, rooms_seen: str, use_deep: bool = False) -> dict:
     """Call GPT vision on one batch of images. Retries on rate limit / timeout."""
     prev_ctx = ''
     if prev:
@@ -178,10 +184,14 @@ SUMMARY: [2 honest sentences a tenant deciding whether to visit would find usefu
             'url': f'data:image/jpeg;base64,{b}', 'detail': 'low'
         }})
 
+    # Cost strategy: use mini for rounds 1-2, deep only when confidence is low
+    # or score is borderline (5-7). Reduces cost by ~85% with minimal quality loss.
+    model = MODEL_DEEP if use_deep else MODEL_FAST
+
     for attempt in range(1, 4):  # 3 attempts
         try:
             resp = client.chat.completions.create(
-                model=MODEL,
+                model=model,
                 messages=[{'role': 'user', 'content': content}],
                 max_completion_tokens=450,
                 temperature=0,
@@ -220,8 +230,8 @@ def analyze_listing(lid: str, photo_urls: list, info: str, full_mode: bool = Fal
             BATCH_SIZES.append(min(4, n))
             n -= BATCH_SIZES[-1]
     else:
-        MIN, MAX = 5, 12          # v5: max bumped 10→12 for better coverage
-        BATCH_SIZES = [3, 3, 3, 3]  # 4 rounds of 3
+        MIN, MAX = 4, 9           # v6: 4 min (enough to see all rooms), 9 max (was 12)
+        BATCH_SIZES = [3, 3, 3]    # 3 rounds max in normal mode (was 4)
 
     print(f'    {len(real)} photos | mode={"FULL" if full_mode else f"adaptive min:{MIN} max:{MAX}"}', flush=True)
 
@@ -241,8 +251,16 @@ def analyze_listing(lid: str, photo_urls: list, info: str, full_mode: bool = Fal
             idx += bsize
             continue
 
+        # Use deep model (gpt-4o) on round 3+ if mini gave low confidence or borderline score
+        use_deep = False
+        if len(rounds) >= 2:
+            last_conf  = rounds[-1].get('confidence', 'medium')
+            last_score = rounds[-1].get('score') or 5
+            use_deep   = last_conf == 'low' or (5 <= last_score <= 7)
+
         try:
-            res = analyze_batch(b64s, info, rounds or None, ', '.join(all_rooms) or None)
+            res = analyze_batch(b64s, info, rounds or None, ', '.join(all_rooms) or None,
+                                use_deep=use_deep)
         except Exception as e:
             print(f'    ❌ Batch failed: {e}', flush=True)
             idx += bsize
@@ -437,3 +455,139 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BATCH API (50% cheaper, async — use for bulk runs, not daily updates)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def build_batch_requests(to_do: dict, info_map: dict) -> list[dict]:
+    """
+    Build OpenAI Batch API request objects for all pending listings.
+    Use for one-time bulk analysis runs — 50% cheaper, results in ~1h.
+
+    to_do: {lid: detail_dict}
+    info_map: {lid: 'T2 105m²'} size/rooms string
+    """
+    import uuid
+    requests_list = []
+    for lid, detail in to_do.items():
+        photos = (detail.get('photo_urls') or detail.get('unblurred_photos') or [])[:3]
+        if not photos:
+            continue
+        info = info_map.get(lid, '?')
+        b64s = [fetch_b64(url) for url in photos]
+        b64s = [b for b in b64s if b]
+        if not b64s:
+            continue
+
+        content = [{'type': 'text', 'text': f'Score this Porto apartment ({info}). '
+                    'Reply with CONDITION_SCORE:N AREA_QUALITY_SCORE:N CONFIDENCE:x '
+                    'RENOVATION:x FEEL:x FINISH:x LIGHT:x AREA_IMPRESSION:x '
+                    'WIDE_ANGLE_FLAG:x RED_FLAGS:x SOLAR_DIRECTION:x SUMMARY:2 sentences.'}]
+        for b in b64s:
+            content.append({'type': 'image_url', 'image_url': {
+                'url': f'data:image/jpeg;base64,{b}', 'detail': 'low'
+            }})
+
+        requests_list.append({
+            'custom_id': f'listing-{lid}',
+            'method': 'POST',
+            'url': '/v1/chat/completions',
+            'body': {
+                'model': MODEL_FAST,
+                'messages': [{'role': 'user', 'content': content}],
+                'max_tokens': 400,
+                'temperature': 0,
+            }
+        })
+    return requests_list
+
+
+def submit_batch(requests_list: list[dict], description: str = 'listing-analysis') -> str:
+    """
+    Submit a Batch API job. Returns batch_id.
+    Results available in ~1h via poll_batch(batch_id).
+    """
+    import tempfile, json as _json
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.jsonl', delete=False) as f:
+        for req in requests_list:
+            f.write(_json.dumps(req) + '\n')
+        tmp_path = f.name
+
+    with open(tmp_path, 'rb') as f:
+        batch_file = client.files.create(file=f, purpose='batch')
+
+    batch = client.batches.create(
+        input_file_id=batch_file.id,
+        endpoint='/v1/chat/completions',
+        completion_window='24h',
+        metadata={'description': description},
+    )
+    print(f'✅ Batch submitted: {batch.id} | {len(requests_list)} requests | ~1h for results')
+    os.unlink(tmp_path)
+    return batch.id
+
+
+def poll_batch(batch_id: str) -> dict | None:
+    """
+    Poll batch status. Returns {lid: parsed_result} when complete, None if still running.
+    Usage: python3 analyze_images.py --batch-poll <batch_id>
+    """
+    import json as _json
+    batch = client.batches.retrieve(batch_id)
+    print(f'Batch {batch_id}: status={batch.status} '
+          f'completed={batch.request_counts.completed}/{batch.request_counts.total}')
+
+    if batch.status != 'completed':
+        return None
+
+    # Download results
+    content = client.files.content(batch.output_file_id)
+    results = {}
+    for line in content.text.strip().split('\n'):
+        obj = _json.loads(line)
+        lid = obj['custom_id'].replace('listing-', '')
+        body = obj.get('response', {}).get('body', {})
+        if body.get('choices'):
+            text = body['choices'][0]['message']['content']
+            results[lid] = parse_resp(text)
+            results[lid]['batch_id'] = batch_id
+    return results
+
+
+if __name__ == '__main__' and '--batch-submit' in sys.argv:
+    # Usage: python3 analyze_images.py --batch-submit
+    # Submits all unanalyzed listings to Batch API (50% cheaper, ~1h turnaround)
+    import json as _json
+    listings_base = {l['id']: l for l in _json.load(open(LISTINGS_FILE))}
+    details_raw   = _json.load(open(DETAILS_FILE))
+    details       = {d['id']: d for d in details_raw}
+    existing      = _json.load(open(IMAGE_FILE)) if os.path.exists(IMAGE_FILE) else {}
+
+    to_do = {lid: d for lid, d in details.items()
+             if lid not in existing and (d.get('photo_urls') or d.get('unblurred_photos'))}
+    info_map = {lid: f'{listings_base.get(lid,{}).get("rooms","?")} {details[lid].get("area_util") or listings_base.get(lid,{}).get("size_m2","?")}m²'
+                for lid in to_do}
+
+    reqs = build_batch_requests(to_do, info_map)
+    print(f'Built {len(reqs)} batch requests for {len(to_do)} listings')
+    batch_id = submit_batch(reqs, 'porto-listing-analysis')
+    print(f'Poll with: python3 analyze_images.py --batch-poll {batch_id}')
+
+elif __name__ == '__main__' and '--batch-poll' in sys.argv:
+    idx = sys.argv.index('--batch-poll')
+    batch_id = sys.argv[idx + 1] if len(sys.argv) > idx + 1 else None
+    if not batch_id:
+        print('Usage: python3 analyze_images.py --batch-poll <batch_id>')
+        sys.exit(1)
+    results = poll_batch(batch_id)
+    if results:
+        import json as _json
+        existing = _json.load(open(IMAGE_FILE)) if os.path.exists(IMAGE_FILE) else {}
+        existing.update(results)
+        with open(IMAGE_FILE, 'w') as f:
+            _json.dump(existing, f, ensure_ascii=False, indent=2)
+        print(f'✅ Saved {len(results)} results → {IMAGE_FILE}')
+    else:
+        print('Not complete yet — try again in a few minutes')

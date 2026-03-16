@@ -447,8 +447,18 @@ def main():
                         else:
                             print('→ pHash different', end=' ')
 
-                # Step 2b: GPT vision (only if pHash inconclusive or PIL unavailable)
-                is_same, verdict = vision_compare(la, lb, details_map.get(a, {}), details_map.get(b, {}))
+                # Step 2b: GPT vision — only call if BOTH listings have photos.
+                # If either has no photos, pHash already couldn't match them, and
+                # sending empty content to vision wastes API credits. Skip entirely.
+                det_a = details_map.get(a, {})
+                det_b = details_map.get(b, {})
+                has_photos_a = bool(det_a.get('photo_urls') or det_a.get('unblurred_photos'))
+                has_photos_b = bool(det_b.get('photo_urls') or det_b.get('unblurred_photos'))
+                if not (has_photos_a and has_photos_b):
+                    print(f'→ 👁️  no_photos (skip)')
+                    continue  # no point calling vision — will just return no_photos
+
+                is_same, verdict = vision_compare(la, lb, det_a, det_b)
                 print(f'→ 👁️  {verdict[:50]}')
                 vision_count += 1
                 if is_same is True:
