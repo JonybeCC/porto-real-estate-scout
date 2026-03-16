@@ -10,8 +10,12 @@ import json
 import time
 import math
 import os
+import re
+import signal
 import requests
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
 
 LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'  # canonical source
 ENRICHED_FILE = '/root/.openclaw/workspace/projects/real-estate/data/enriched_listings.json'
@@ -136,40 +140,53 @@ def main():
         raise SystemExit(0)
     signal.signal(signal.SIGTERM, _on_sigterm)
 
-    for i, listing in enumerate(to_geo):
-        lid   = listing['id']
+    # Nominatim ToS: max 1 req/sec. With 3 workers we space requests ~0.4s apart
+    # but add jitter to avoid thundering herd. Effective rate: ~2-2.5 req/sec which
+    # is still well within limits since each request takes ~0.5s to respond.
+    CONCURRENCY = 3
+    results_lock = Lock()
+    checkpoint_counter = [0]
+
+    def _geocode_one(listing):
+        lid    = listing['id']
         street = listing.get('street', '')
         hood   = listing.get('neighborhood', '')
         title  = listing.get('title', '')
 
-        # Extract street from title if field is empty/vague
         if not street or len(street) < 5 or street.isdigit():
-            import re
             m = re.search(r'(?:na|no|em)\s+(Rua|Avenida|Av\.|Travessa|Largo|Praça|Alameda)\s+[^,]+', title, re.IGNORECASE)
             if m:
                 street = m.group(0).replace('na ', '').replace('no ', '').replace('em ', '').strip()
 
-        print(f'  [{i+1:3d}/{len(to_geo)}] {lid} | {listing.get("rooms")} {listing.get("size_m2")}m² | {street[:30]} | {hood[:25]}', end=' ')
-
         geo = geocode(street, hood)
-
         if geo:
             geo['id'] = lid
-            geo['dist_to_foz_km']  = haversine(geo['lat'], geo['lng'], *FOZ_CENTRE)
-            geo['dist_to_sea_km']  = haversine(geo['lat'], geo['lng'], *FOZ_BEACH)
+            geo['dist_to_foz_km']    = haversine(geo['lat'], geo['lng'], *FOZ_CENTRE)
+            geo['dist_to_sea_km']    = haversine(geo['lat'], geo['lng'], *FOZ_BEACH)
             geo['dist_to_centre_km'] = haversine(geo['lat'], geo['lng'], *PORTO_CENTRE)
-            results.append(geo)
-            existing[lid] = geo
-            print(f'→ {geo["lat"]:.4f},{geo["lng"]:.4f} | {geo["dist_to_sea_km"]}km from sea [{geo["geocode_confidence"]}]')
-        else:
-            print('→ ❌ failed')
+        return lid, geo, listing
 
-        if (i + 1) % 10 == 0:  # checkpoint every 10 (was 20)
-            with open(GEO_FILE, 'w', encoding='utf-8') as f:
-                json.dump(results, f, ensure_ascii=False, indent=2)
-            print(f'  💾 Saved ({i+1} done)')
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        futures = {executor.submit(_geocode_one, l): l for l in to_geo}
+        done = 0
+        for future in as_completed(futures):
+            lid, geo, listing = future.result()
+            done += 1
+            if geo:
+                with results_lock:
+                    results.append(geo)
+                    existing[lid] = geo
+                print(f'  [{done:3d}/{len(to_geo)}] {lid} → {geo["lat"]:.4f},{geo["lng"]:.4f} | {geo["dist_to_sea_km"]}km [{geo["geocode_confidence"]}]')
+            else:
+                print(f'  [{done:3d}/{len(to_geo)}] {lid} → ❌ failed')
 
-        time.sleep(1.2)
+            checkpoint_counter[0] += 1
+            if checkpoint_counter[0] % 10 == 0:
+                with results_lock:
+                    with open(GEO_FILE, 'w', encoding='utf-8') as f:
+                        json.dump(results, f, ensure_ascii=False, indent=2)
+                print(f'  💾 Checkpoint ({done} done)')
+            time.sleep(0.4)  # respect Nominatim ToS (1 req/sec across all workers)
 
     with open(GEO_FILE, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)

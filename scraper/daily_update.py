@@ -27,6 +27,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
 from pipeline_state import PipelineRun
+from paths import PATHS
 
 # ── Load environment variables (.env file takes priority, then openclaw.json) ─
 def _load_env():
@@ -71,12 +72,12 @@ _load_env()
 
 API_KEY    = os.environ.get('ZENROWS_API_KEY', 'a19f204d97b9578f8d82bd749ac175bd5383dd6e')
 OPENAI_KEY = os.environ.get('OPENAI_API_KEY')
-CREDS_FILE = '/root/.openclaw/credentials/google-service-account.json'
-JSON_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'
-CSV_FILE   = '/root/.openclaw/workspace/projects/real-estate/data/listings.csv'
-SHEET_URL  = 'https://docs.google.com/spreadsheets/d/1Ljk9s45BovbRfk1QIUGgGxbjnpIgs2F52rJjDNGQOQI/edit'
-SHEET_NAME = 'Listings'
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CREDS_FILE = PATHS.google_service_account
+JSON_FILE  = PATHS.listings
+CSV_FILE   = os.path.join(PATHS.data, 'listings.csv')
+SHEET_URL  = PATHS.sheet_url
+SHEET_NAME = PATHS.sheet_name
+SCRIPT_DIR = PATHS.scraper
 
 SHAPE    = '%28%28ovgzFrr%60t%40n%60%40omEsWm%5BzGe%7C%40vc%40oUjiA%60%40fHdfFciCjuA%29%29'
 BASE_URL = f'https://www.idealista.pt/areas/arrendar-casas/com-preco-max_3100,preco-min_1650,t2,t3/?shape={SHAPE}'
@@ -130,9 +131,46 @@ def parse_size(text: str) -> int | None:
     return int(float(m.group(1).replace(',', '.'))) if m else None
 
 
+PORTO_ZONES = [
+    'pinhais da foz', 'nevogilde', 'foz do douro', 'foz velha', 'foz', 'gondarém',
+    'serralves', 'pinheiro manso', 'massarelos', 'boavista', 'aldoar',
+    'lordelo do ouro', 'bessa leite', 'bessa', 'aviz', 'cristo rei', 'cedofeita',
+    'bonfim', 'matosinhos', 'paranhos', 'ramalde', 'campanhã', 'baixa', 'porto',
+]
+
+
 def extract_street(title: str) -> str:
     m = re.search(r'(?:na|no|em)\s+([^,]+)', title)
     return m.group(1).strip() if m else ''
+
+
+def extract_neighbourhood(title: str) -> str:
+    """
+    Extract neighbourhood from Idealista title, skipping house numbers and s/n.
+
+    Titles follow the pattern:
+      'Apartamento T2 na Rua X, [number_or_s/n], [neighbourhood], [full zone]'
+      'Apartamento T3 na Rua X, [neighbourhood], [full zone]'
+
+    The old code always took parts[1] which grabbed house numbers (13, 350, s/n)
+    instead of the actual neighbourhood for ~73/157 listings.
+    """
+    parts = [p.strip() for p in title.split(',')]
+    for p in parts[1:]:            # skip first part (street name with Rua/Av/...)
+        if not p:
+            continue
+        if re.match(r'^\d+$|^s/n$', p, re.IGNORECASE):
+            continue               # skip bare house numbers and s/n
+        if len(p) < 3:
+            continue
+        pl = p.lower()
+        # Prefer known Porto zones for reliable matching
+        for z in PORTO_ZONES:
+            if z in pl:
+                return p
+        # Otherwise return first non-numeric, non-short token
+        return p
+    return parts[-1].strip() if parts else ''
 
 
 def parse_listing(article) -> dict:
@@ -150,7 +188,7 @@ def parse_listing(article) -> dict:
         listing['url']   = f'https://www.idealista.pt/imovel/{listing["id"]}/'
 
     listing['street']       = extract_street(listing['title'])
-    listing['neighborhood'] = listing['title'].split(',')[1].strip() if ',' in listing['title'] else ''
+    listing['neighborhood'] = extract_neighbourhood(listing['title'])
 
     price_el = article.select_one('.item-price')
     listing['price_raw'] = price_el.get_text(strip=True) if price_el else ''
