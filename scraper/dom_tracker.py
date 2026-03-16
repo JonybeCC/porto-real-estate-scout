@@ -26,7 +26,7 @@ def load_json(path: str, default):
 def days_between(d1: str, d2: str) -> int:
     try:
         return (date.fromisoformat(d2) - date.fromisoformat(d1)).days
-    except:
+    except (ValueError, TypeError):
         return 0
 
 

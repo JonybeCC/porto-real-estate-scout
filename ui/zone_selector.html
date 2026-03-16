@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idealista Zone Selector — JBizz 🦞</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f0f0f; color: #e0e0e0; display: flex; height: 100vh; }
+    #map { flex: 1; }
+    #panel { width: 380px; background: #1a1a1a; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; border-left: 1px solid #333; }
+    h1 { font-size: 18px; color: #ff6b35; }
+    h2 { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .card { background: #222; border-radius: 8px; padding: 14px; }
+    .instructions { font-size: 13px; line-height: 1.6; color: #aaa; }
+    .instructions li { margin-left: 16px; }
+    #coords-list { font-size: 12px; font-family: monospace; color: #7ec8e3; max-height: 160px; overflow-y: auto; }
+    .coord-item { padding: 2px 0; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
+    .coord-item button { background: #333; border: none; color: #ff6b35; cursor: pointer; font-size: 10px; padding: 2px 6px; border-radius: 3px; }
+    #url-output { font-size: 11px; font-family: monospace; color: #7ec8e3; word-break: break-all; background: #111; padding: 10px; border-radius: 6px; min-height: 60px; }
+    #encoded-output { font-size: 11px; font-family: monospace; color: #a8d8a8; background: #111; padding: 8px; border-radius: 6px; word-break: break-all; }
+    .btn { padding: 9px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; width: 100%; }
+    .btn-primary { background: #ff6b35; color: white; }
+    .btn-primary:hover { background: #ff8855; }
+    .btn-secondary { background: #333; color: #e0e0e0; }
+    .btn-secondary:hover { background: #444; }
+    .btn-danger { background: #8b0000; color: white; }
+    .btn-danger:hover { background: #aa0000; }
+    .btn-group { display: flex; gap: 8px; }
+    .btn-group .btn { flex: 1; }
+    #stats { font-size: 12px; color: #aaa; line-height: 1.7; }
+    .stat-row { display: flex; justify-content: space-between; }
+    .stat-val { color: #e0e0e0; font-family: monospace; }
+    #status { font-size: 12px; padding: 8px 12px; border-radius: 6px; background: #1e3a2a; color: #7ec8e3; text-align: center; }
+    select, input[type=number] { background: #2a2a2a; border: 1px solid #444; color: #e0e0e0; padding: 6px 10px; border-radius: 5px; font-size: 13px; width: 100%; }
+    .filter-row { display: flex; gap: 8px; align-items: center; }
+    .filter-row label { font-size: 12px; color: #888; white-space: nowrap; }
+    textarea { background: #111; border: 1px solid #333; color: #e0e0e0; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 11px; width: 100%; resize: vertical; }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<div id="panel">
+  <div>
+    <h1>🦞 Zone Selector</h1>
+    <p style="font-size:12px;color:#666;margin-top:4px">Idealista.pt · Porto Real Estate Scout</p>
+  </div>
+
+  <div class="card">
+    <h2>How to use</h2>
+    <ul class="instructions">
+      <li>Click on the map to add polygon vertices</li>
+      <li>Drag markers to adjust</li>
+      <li>Need ≥3 points for a valid zone</li>
+      <li>Polygon closes automatically</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Search filters</h2>
+    <div class="filter-row" style="margin-bottom:8px">
+      <label>Min €</label>
+      <input type="number" id="price-min" value="1650" min="0" max="10000" step="50">
+      <label>Max €</label>
+      <input type="number" id="price-max" value="3100" min="0" max="10000" step="50">
+    </div>
+    <div class="filter-row">
+      <label>Types</label>
+      <input type="text" id="apt-types" value="t2,t3" style="background:#2a2a2a;border:1px solid #444;color:#e0e0e0;padding:6px 10px;border-radius:5px;font-size:13px;flex:1">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Vertices (<span id="coord-count">0</span>)</h2>
+    <div id="coords-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>Zone stats</h2>
+    <div id="stats">—</div>
+  </div>
+
+  <div class="card">
+    <h2>Encoded shape</h2>
+    <div id="encoded-output">—</div>
+  </div>
+
+  <div class="card">
+    <h2>Search URL</h2>
+    <div id="url-output">Add at least 3 points to generate URL</div>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="copyUrl()">📋 Copy URL</button>
+    <button class="btn btn-primary" onclick="openUrl()">🔗 Open</button>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-secondary" onclick="exportJson()">💾 Export JSON</button>
+    <button class="btn btn-secondary" onclick="exportGeojson()">📦 GeoJSON</button>
+  </div>
+
+  <div>
+    <h2 style="margin-bottom:8px">Import coordinates (JSON)</h2>
+    <textarea id="import-text" rows="4" placeholder='[[41.168, -8.691], [41.163, -8.658], ...]'></textarea>
+    <button class="btn btn-secondary" onclick="importCoords()" style="margin-top:6px">Import</button>
+  </div>
+
+  <div class="btn-group">
+    <button class="btn btn-secondary" onclick="undoLast()">↩ Undo</button>
+    <button class="btn btn-danger" onclick="clearAll()">🗑 Clear</button>
+  </div>
+
+  <div id="status">Click on the map to start drawing</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+const state = { points: [], markers: [], polygon: null };
+const EXISTING = [[41.16856, -8.69178], [41.1632, -8.65874], [41.16714, -8.65419], [41.16572, -8.6444], [41.15984, -8.6408], [41.14794, -8.64097], [41.14646, -8.67796]];
+const CENTER   = [41.15983714285715, -8.658405714285715];
+
+// ── Map init ─────────────────────────────────────────────────────────────────
+const map = L.map('map').setView(CENTER, 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {});
+
+const markerIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:12px;height:12px;background:#ff6b35;border:2px solid white;border-radius:50%;cursor:move"></div>',
+    iconSize: [12, 12], iconAnchor: [6, 6]
+});
+
+// ── Polyline encode (JS mirror of Python) ────────────────────────────────────
+function encodeValue(v) {
+    v = Math.round(v * 1e5);
+    v = v << 1;
+    if (v < 0) v = ~v;
+    let result = '';
+    while (v >= 0x20) {
+        result += String.fromCharCode((0x20 | (v & 0x1f)) + 63);
+        v >>= 5;
+    }
+    return result + String.fromCharCode(v + 63);
+}
+
+function encodePolyline(pts) {
+    let result = '', prevLat = 0, prevLng = 0;
+    const closed = [...pts];
+    if (closed.length > 0 && (closed[0][0] !== closed[closed.length-1][0] || closed[0][1] !== closed[closed.length-1][1])) {
+        closed.push(closed[0]);
+    }
+    for (const [lat, lng] of closed) {
+        result += encodeValue(lat - prevLat) + encodeValue(lng - prevLng);
+        prevLat = lat; prevLng = lng;
+    }
+    return result;
+}
+
+// ── UI update ─────────────────────────────────────────────────────────────────
+function update() {
+    const pts = state.points;
+    document.getElementById('coord-count').textContent = pts.length;
+
+    // Coords list
+    const list = document.getElementById('coords-list');
+    list.innerHTML = pts.map((p, i) =>
+        `<div class="coord-item">
+            <span>[${i+1}] ${p[0].toFixed(5)}, ${p[1].toFixed(5)}</span>
+            <button onclick="removePoint(${i})">✕</button>
+         </div>`
+    ).join('');
+
+    // Remove old polygon
+    if (state.polygon) { map.removeLayer(state.polygon); state.polygon = null; }
+
+    if (pts.length < 2) {
+        document.getElementById('encoded-output').textContent = '—';
+        document.getElementById('url-output').textContent = 'Add at least 3 points to generate URL';
+        document.getElementById('stats').textContent = '—';
+        return;
+    }
+
+    // Draw polygon
+    const latlngs = pts.map(p => [p[0], p[1]]);
+    state.polygon = L.polygon(latlngs, { color: '#ff6b35', fillOpacity: 0.15, weight: 2 }).addTo(map);
+
+    if (pts.length < 3) return;
+
+    // Encode
+    const encoded = encodePolyline(pts);
+    document.getElementById('encoded-output').textContent = encoded;
+
+    // URL
+    const priceMin = document.getElementById('price-min').value;
+    const priceMax = document.getElementById('price-max').value;
+    const types = document.getElementById('apt-types').value;
+    const shape = '((' + encoded + '))';
+    const shapeEnc = encodeURIComponent(shape);
+    const url = `https://www.idealista.pt/areas/arrendar-casas/com-preco-max_${priceMax},preco-min_${priceMin},${types}/?shape=${shapeEnc}`;
+    document.getElementById('url-output').textContent = url;
+
+    // Stats
+    const lats = pts.map(p => p[0]), lngs = pts.map(p => p[1]);
+    const cLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+    const cLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+    const wKm  = (Math.max(...lngs) - Math.min(...lngs)) * 111 * Math.cos(cLat * Math.PI/180);
+    const hKm  = (Math.max(...lats) - Math.min(...lats)) * 111;
+    document.getElementById('stats').innerHTML = `
+        <div class="stat-row"><span>Center</span><span class="stat-val">${cLat.toFixed(4)}, ${cLng.toFixed(4)}</span></div>
+        <div class="stat-row"><span>Size</span><span class="stat-val">${wKm.toFixed(1)}km × ${hKm.toFixed(1)}km</span></div>
+        <div class="stat-row"><span>Vertices</span><span class="stat-val">${pts.length}</span></div>
+    `;
+}
+
+// ── Map click handler ─────────────────────────────────────────────────────────
+map.on('click', e => {
+    const pt = [e.latlng.lat, e.latlng.lng];
+    state.points.push(pt);
+    const marker = L.marker(pt, { icon: markerIcon, draggable: true })
+        .addTo(map)
+        .on('drag', ev => {
+            const idx = state.markers.indexOf(marker);
+            if (idx !== -1) state.points[idx] = [ev.latlng.lat, ev.latlng.lng];
+            update();
+        });
+    state.markers.push(marker);
+    update();
+    document.getElementById('status').textContent = `${state.points.length} point(s) placed`;
+});
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+function removePoint(i) {
+    state.points.splice(i, 1);
+    map.removeLayer(state.markers[i]);
+    state.markers.splice(i, 1);
+    update();
+}
+
+function undoLast() {
+    if (!state.points.length) return;
+    const i = state.points.length - 1;
+    state.points.pop();
+    map.removeLayer(state.markers[i]);
+    state.markers.pop();
+    update();
+}
+
+function clearAll() {
+    state.points = [];
+    state.markers.forEach(m => map.removeLayer(m));
+    state.markers = [];
+    if (state.polygon) { map.removeLayer(state.polygon); state.polygon = null; }
+    update();
+    document.getElementById('status').textContent = 'Cleared — click to start';
+}
+
+function copyUrl() {
+    const url = document.getElementById('url-output').textContent;
+    if (url.startsWith('Add')) return;
+    navigator.clipboard.writeText(url).then(() => {
+        document.getElementById('status').textContent = '✅ URL copied to clipboard';
+    });
+}
+
+function openUrl() {
+    const url = document.getElementById('url-output').textContent;
+    if (!url.startsWith('Add')) window.open(url, '_blank');
+}
+
+function exportJson() {
+    const data = JSON.stringify(state.points, null, 2);
+    download('zone_coords.json', data);
+}
+
+function exportGeojson() {
+    if (state.points.length < 3) return;
+    const ring = [...state.points, state.points[0]].map(p => [p[1], p[0]]);
+    const geojson = {
+        type: 'FeatureCollection',
+        features: [{
+            type: 'Feature',
+            properties: { name: 'Custom Zone', encoded: encodePolyline(state.points) },
+            geometry: { type: 'Polygon', coordinates: [ring] }
+        }]
+    };
+    download('zone.geojson', JSON.stringify(geojson, null, 2));
+}
+
+function importCoords() {
+    try {
+        const pts = JSON.parse(document.getElementById('import-text').value);
+        clearAll();
+        for (const p of pts) {
+            const pt = [p[0], p[1]];
+            state.points.push(pt);
+            const marker = L.marker(pt, { icon: markerIcon, draggable: true })
+                .addTo(map)
+                .on('drag', ev => {
+                    const idx = state.markers.indexOf(marker);
+                    if (idx !== -1) state.points[idx] = [ev.latlng.lat, ev.latlng.lng];
+                    update();
+                });
+            state.markers.push(marker);
+        }
+        if (pts.length) map.fitBounds(state.markers.map(m => m.getLatLng()));
+        update();
+        document.getElementById('status').textContent = `Imported ${pts.length} points`;
+    } catch(e) {
+        document.getElementById('status').textContent = '❌ Invalid JSON: ' + e.message;
+    }
+}
+
+function download(filename, content) {
+    const a = document.createElement('a');
+    a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(content);
+    a.download = filename;
+    a.click();
+}
+
+// ── Pre-populate with existing zone if provided ───────────────────────────────
+if (EXISTING) {
+    document.getElementById('import-text').value = JSON.stringify(EXISTING, null, 2);
+    importCoords();
+}
+
+// Update URL when filters change
+document.getElementById('price-min').addEventListener('input', update);
+document.getElementById('price-max').addEventListener('input', update);
+document.getElementById('apt-types').addEventListener('input', update);
+</script>
+</body>
+</html>

@@ -13,7 +13,7 @@ import os
 import requests
 from datetime import datetime
 
-LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings_deduped.json'
+LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'  # canonical source
 ENRICHED_FILE = '/root/.openclaw/workspace/projects/real-estate/data/enriched_listings.json'
 GEO_FILE      = '/root/.openclaw/workspace/projects/real-estate/data/geocoded.json'
 
@@ -55,7 +55,7 @@ def geocode_opencage(query):
                     'geocode_display': results[0].get('formatted', '')[:100],
                     'geocode_confidence': f'opencage:{results[0].get("confidence",0)}',
                 }
-    except:
+    except (requests.RequestException, KeyError, ValueError):
         pass
     return None
 
@@ -106,8 +106,11 @@ def geocode(street, neighborhood, city='Porto'):
     return best
 
 def main():
-    print('🦞 Geocoder — Nominatim')
+    import signal
+    print('🦞 Geocoder — Nominatim + OpenCage fallback')
     print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M")}')
+    oc_status = '✅ set' if OPENCAGE_KEY else '❌ not set — street-level accuracy reduced'
+    print(f'🔑 OpenCage: {oc_status}')
     print('=' * 50)
 
     with open(LISTINGS_FILE, encoding='utf-8') as f:
@@ -124,6 +127,14 @@ def main():
     print(f'📦 {len(listings)} listings | {len(existing)} already geocoded | {len(to_geo)} to process\n')
 
     results = list(existing.values())
+
+    # SIGTERM handler — save progress before dying
+    def _on_sigterm(signum, frame):
+        with open(GEO_FILE, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        print(f'\n💾 SIGTERM — saved {len(results)} geocoded entries', flush=True)
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     for i, listing in enumerate(to_geo):
         lid   = listing['id']
@@ -153,7 +164,7 @@ def main():
         else:
             print('→ ❌ failed')
 
-        if (i + 1) % 20 == 0:
+        if (i + 1) % 10 == 0:  # checkpoint every 10 (was 20)
             with open(GEO_FILE, 'w', encoding='utf-8') as f:
                 json.dump(results, f, ensure_ascii=False, indent=2)
             print(f'  💾 Saved ({i+1} done)')

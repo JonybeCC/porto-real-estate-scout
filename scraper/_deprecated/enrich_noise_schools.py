@@ -78,7 +78,7 @@ def overpass_query(lat: float, lng: float, radius_m: int, filters: list) -> list
         r = requests.post(OVERPASS_URL, data={'data': query}, timeout=15)
         if r.status_code == 200:
             return r.json().get('elements', [])
-    except:
+    except (requests.RequestException, ValueError, KeyError):
         pass
     return []
 
@@ -131,7 +131,7 @@ def main():
         with open(COMMERCE_FILE) as f:
             commerce_list = json.load(f)
         commerce_map = {c['id']: c for c in commerce_list}
-    except:
+    except (FileNotFoundError, json.JSONDecodeError):
         commerce_map = {}
 
     # Find listings needing enrichment

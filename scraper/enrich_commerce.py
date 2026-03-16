@@ -19,6 +19,7 @@ Adds to each listing:
 import json
 import time
 import math
+import signal
 import requests
 from datetime import datetime
 
@@ -26,7 +27,12 @@ GEO_FILE      = '/root/.openclaw/workspace/projects/real-estate/data/geocoded.js
 ENRICHED_FILE = '/root/.openclaw/workspace/projects/real-estate/data/enriched_listings.json'
 COMMERCE_FILE = '/root/.openclaw/workspace/projects/real-estate/data/commerce.json'
 
-OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
+OVERPASS_MIRRORS = [
+    'https://overpass.private.coffee/api/interpreter',   # most reliable
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass-api.de/api/interpreter',           # main (often overloaded)
+]
+OVERPASS_URL = OVERPASS_MIRRORS[0]  # default; overpass_query() tries all mirrors
 HEADERS = {'User-Agent': 'JBizzRealEstateTracker/1.0 (jmcscavalheiro@gmail.com)'}
 
 SUPERMARKET_BRANDS = ['Continente', 'Pingo Doce', 'Lidl', 'Aldi', 'Mercadona',
@@ -41,21 +47,25 @@ def haversine(lat1, lon1, lat2, lon2):
     return round(R * 2 * math.asin(math.sqrt(a)), 2)
 
 def overpass_query(lat, lng, radius_m, amenity_filters):
-    """Query Overpass for nearby POIs"""
+    """Query Overpass for nearby POIs, trying multiple mirrors on failure."""
     filters_str = '\n'.join([f'  node[{f}](around:{radius_m},{lat},{lng});' for f in amenity_filters])
-    query = f"""
-[out:json][timeout:15];
+    query = f"""[out:json][timeout:20];
 (
 {filters_str}
 );
 out body;
 """
-    try:
-        r = requests.post(OVERPASS_URL, data={'data': query}, headers=HEADERS, timeout=20)
-        if r.status_code == 200:
-            return r.json().get('elements', [])
-    except Exception as e:
-        pass
+    for mirror in OVERPASS_MIRRORS:
+        for attempt in range(2):
+            try:
+                r = requests.post(mirror, data={'data': query}, headers=HEADERS, timeout=25)
+                if r.status_code == 200:
+                    return r.json().get('elements', [])
+                time.sleep(1)
+            except requests.Timeout:
+                time.sleep(2)
+            except Exception:
+                time.sleep(1)
     return []
 
 def find_nearest(lat, lng, elements):
@@ -164,19 +174,26 @@ def main():
 
     with open(GEO_FILE) as f:
         geo_list = json.load(f)
-    geo_map = {g['id']: g for g in geo_list if g.get('lat')}
 
     # Load existing
     try:
         with open(COMMERCE_FILE) as f:
             existing = {c['id']: c for c in json.load(f)}
-    except:
+    except (FileNotFoundError, json.JSONDecodeError):
         existing = {}
 
     to_process = [g for g in geo_list if g.get('lat') and g['id'] not in existing]
     print(f'📦 {len(to_process)} listings to process ({len(existing)} already done)\n')
 
     results = list(existing.values())
+
+    # SIGTERM handler — save progress before dying
+    def _on_sigterm(signum, frame):
+        with open(COMMERCE_FILE, 'w') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        print(f'\n💾 SIGTERM — saved {len(results)} entries to {COMMERCE_FILE}', flush=True)
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     for i, g in enumerate(to_process):
         lid = g['id']
@@ -190,7 +207,7 @@ def main():
         notes_short = res.get('commerce_notes', '')[:70]
         print(f'→ {notes_short}')
 
-        if (i + 1) % 10 == 0:
+        if (i + 1) % 5 == 0:  # checkpoint every 5 (was 10)
             with open(COMMERCE_FILE, 'w') as f:
                 json.dump(results, f, ensure_ascii=False, indent=2)
             print(f'  💾 Saved ({i+1} done)')

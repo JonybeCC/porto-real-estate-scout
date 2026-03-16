@@ -57,7 +57,8 @@ ZONE_PRICE_MEDIANS = {
 def load_json(path, default):
     try:
         with open(path, encoding='utf-8') as f: return json.load(f)
-    except: return default
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return default
 
 def sun_score(sun: str, description: str = '', solar_direction: str = '') -> int:
     """
@@ -85,7 +86,8 @@ def floor_score(floor_val) -> int:
         if n == 2: return 3
         if n == 3: return 5
         if n >= 4: return 7
-    except: pass
+    except (AttributeError, ValueError):
+        pass
     if any(x in s for x in ['penthouse', 'último', 'cobertura', 'top']): return 8
     return 2
 
@@ -113,33 +115,80 @@ def compute_zone_medians(listings: list) -> dict:
     return medians
 
 
+# ── Image scoring weights — loaded from analyze_images.py SCORE_CONFIG ────────
+# These are kept in sync with analyze_images.py. Change there to tune.
+_IMG_FINISH_BONUS    = {'Luxury': 6, 'Premium': 3, 'Standard': 0, 'Basic': -2}
+_IMG_LIGHT_BONUS     = {'Excellent': 4, 'Good': 2, 'Average': 0, 'Poor': -2}
+_IMG_AREA_BONUS      = {'Spacious': 3, 'Adequate': 0, 'Cramped': -4}
+_IMG_RENOV_BONUS     = {'New Build': 8, 'Fully Renovated': 5, 'Partially Renovated': 2,
+                         'Original': -2, 'Unknown': 0}
+
+
 def calc_score_v8(e: dict, zone_medians: dict) -> int:
     """
     v8 Opportunity Score (0-100).
 
+    Image scoring is now MODULAR — weights live in _IMG_* dicts above (mirrored
+    from analyze_images.py SCORE_CONFIG). All image-derived dimensions are scored
+    and summed separately from the condition score so they can be tuned independently.
+
     Key improvements over v7:
+    - Image: condition (×2.5), finish, light, area_impression, renovation all scored
+    - Wide-angle flag detected by vision model → area_impression credibility reduced
     - Image fallback: 5pts (was 10) — unknown ≠ neutral
     - Sun unknown: 4pts (was 8) — 74/128 missing → was inflating
-    - Garage: 77% of listings have it → scaled down (3pts base, 5 for 2+ spaces)
+    - Garage: 77% of listings have it → scaled (3pts base, 6 for 2+ spaces)
     - Price value: uses live zone medians, not manual config
-    - Freshness: 90+ days on market = staleness penalty
-    - €/m² sanity check: extreme outliers penalised
-    - Sea view: bonus only if walk time ≤25min (nearby enough to matter)
+    - Staleness: 30+ days = -2, 60+ = -4
+    - Sea view: bonus gated on walk time ≤25min
     """
     score = 0
 
-    # ── 1. CONDITION & QUALITY (0-25) ────────────────────────────────────────
+    # ── 1. CONDITION & QUALITY — image-derived (0-47 total from image dims) ──
     img = e.get('image_score')
-    if img:
+    if img is not None:
+        # Base condition score (0-25)
         score += min(25, float(img) * 2.5)
+
+        # Finish quality bonus/penalty (modular — edit _IMG_FINISH_BONUS to tune)
+        score += _IMG_FINISH_BONUS.get(e.get('finish', 'Standard'), 0)
+
+        # Natural light bonus/penalty
+        score += _IMG_LIGHT_BONUS.get(e.get('light_quality', 'Average'), 0)
+
+        # Area quality (v5 integer 1-10 preferred) or fallback to text impression
+        # The vision model already reasons about furniture scale vs claimed m² even
+        # with wide-angle shots, so the score is still meaningful. Wide-angle just
+        # introduces modest uncertainty — apply a small discount, not a zero-out.
+        aq = e.get('area_quality_score')
+        if aq is not None and isinstance(aq, (int, float)):
+            # 1-10 scale maps to -2 to +4 points
+            if aq >= 9:   area_pts = 4
+            elif aq >= 7: area_pts = 2
+            elif aq <= 3: area_pts = -2
+            else:         area_pts = 0
+        else:
+            # Fallback to v4 text field
+            area_imp = e.get('area_impression', 'Adequate')
+            area_pts = _IMG_AREA_BONUS.get(area_imp, 0)
+
+        if e.get('wide_angle_flag'):
+            # Modest uncertainty discount: reduce positive area bonus by 1 pt,
+            # leave neutral/negative scores unchanged. The model still saw the
+            # furniture, proportions and ceiling height — it's not blind to space.
+            area_pts = max(area_pts - 1, area_pts if area_pts <= 0 else area_pts - 1)
+        score += area_pts
+
+        # Renovation quality
+        score += _IMG_RENOV_BONUS.get(e.get('renovation', 'Unknown'), 0)
     else:
-        score += 5  # v8: reduced from 10 — no photos = real uncertainty
+        score += 5  # no photos = real uncertainty; reduced from 10
 
     # ── 2. SUN EXPOSURE (0-20) ───────────────────────────────────────────────
     score += sun_score(
         e.get('sun_exposure', ''),
         e.get('condition_summary', ''),
-        e.get('solar_direction', ''),    # from GPT-5.1 photo analysis
+        e.get('solar_direction', ''),    # from vision model photo shadow analysis
     )
 
     # ── 3. ZONE DESIRABILITY (0-15) ──────────────────────────────────────────
@@ -364,7 +413,8 @@ def main():
         # ── Space per room ────────────────────────────────────────────────────
         try:
             num_rooms = int(re.search(r'\d+', l.get('rooms', '1')).group())
-        except: num_rooms = 1
+        except (AttributeError, ValueError):
+            num_rooms = 1
         space_per_room = round(size_ref / max(1, num_rooms), 1) if size_ref else 0
 
         # ── Build enrichment object ───────────────────────────────────────────
@@ -384,11 +434,20 @@ def main():
             'dist_to_foz_km': geo.get('dist_to_foz_km'),
             'sea_view': has_sea_view, 'outdoor_space': outdoor,
             'owner_direct': owner_direct,
-            'image_score': img_score, 'feel': vis.get('feel'), 'finish': vis.get('finish'),
-            'light_quality': vis.get('light'), 'images_analyzed': vis.get('total_images'),
-            'renovation': vis.get('renovation'),
-            'score_progression': str(vis.get('score_progression', [])),
-            'red_flags_visual': vis.get('red_flags'), 'image_summary': vis.get('summary'),
+            # Image analysis fields (v5: full set of vision-derived signals)
+            'image_score':        img_score,
+            'area_quality_score': vis.get('area_quality_score'),   # v5: new
+            'feel':               vis.get('feel'),
+            'finish':             vis.get('finish'),
+            'light_quality':      vis.get('light'),
+            'area_impression':    vis.get('area_impression'),       # v5: used in scoring
+            'wide_angle_flag':    vis.get('wide_angle_flag', False),# v5: lens distortion flag
+            'renovation':         vis.get('renovation'),
+            'renovation_year':    vis.get('renovation_year'),       # v5: new
+            'images_analyzed':    vis.get('total_images'),
+            'score_progression':  str(vis.get('score_progression', [])),
+            'red_flags_visual':   vis.get('red_flags'),
+            'image_summary':      vis.get('summary'),
             'condition_summary': det.get('full_description', '')[:500],
             'days_on_market': dom.get('days_on_market', 0),
             'space_per_room_m2': space_per_room,
@@ -485,26 +544,37 @@ def row_from_enriched(rank: int, e: dict) -> list:
         (e.get('condition_summary') or '')[:200], e.get('url')
     ]
 
-def push_to_sheets(enriched_listings: list):
+def push_to_sheets(enriched_listings: list, retries: int = 3):
+    """Push enriched listings to Google Sheets with retry on transient errors."""
     print('\n📊 Pushing to Google Sheets...')
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
-    gc    = gspread.authorize(creds)
-    sh    = gc.open_by_url(SHEET_URL)
-    try:
-        ws = sh.worksheet('Enriched_v7')
-    except:
-        ws = sh.add_worksheet(title='Enriched_v7', rows=300, cols=35)
-    ws.clear()
-    
-    sorted_list = sorted(enriched_listings, key=lambda x: x.get('opportunity_score', 0), reverse=True)
-    rows = [SHEET_HEADERS]
-    for rank, e in enumerate(sorted_list, 1):
-        rows.append(row_from_enriched(rank, e))
-    
-    for i in range(0, len(rows), 50):
-        ws.update(rows[i:i+50], f'A{i+1}', value_input_option='USER_ENTERED')
-    
-    print(f'  ✅ {len(enriched_listings)} rows pushed.')
+    for attempt in range(1, retries + 1):
+        try:
+            creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+            gc    = gspread.authorize(creds)
+            sh    = gc.open_by_url(SHEET_URL)
+            try:
+                ws = sh.worksheet('Enriched_v7')
+            except Exception:
+                ws = sh.add_worksheet(title='Enriched_v7', rows=300, cols=50)
+
+            sorted_list = sorted(enriched_listings, key=lambda x: x.get('opportunity_score', 0), reverse=True)
+            rows = [SHEET_HEADERS]
+            for rank, e in enumerate(sorted_list, 1):
+                rows.append(row_from_enriched(rank, e))
+
+            # Build full payload first, then clear + write (avoids partial clear on write failure)
+            ws.clear()
+            for i in range(0, len(rows), 50):
+                ws.update(rows[i:i+50], f'A{i+1}', value_input_option='USER_ENTERED')
+                time.sleep(0.5)  # stay under Sheets API quota (60 req/min)
+
+            print(f'  ✅ {len(enriched_listings)} rows pushed (attempt {attempt}).')
+            return
+        except Exception as e:
+            print(f'  ⚠️  Sheets push failed (attempt {attempt}/{retries}): {e}')
+            if attempt < retries:
+                time.sleep(10 * attempt)  # back-off: 10s, 20s
+    print('  ❌ Sheets push gave up after all retries — local JSON is still saved.')
 
 if __name__ == '__main__':
     main()

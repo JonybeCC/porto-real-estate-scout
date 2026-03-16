@@ -18,7 +18,8 @@ DOM_FILE      = '/root/.openclaw/workspace/projects/real-estate/data/dom_tracker
 def load_json(path, default):
     try:
         with open(path) as f: return json.load(f)
-    except: return default
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return default
 
 
 def run(dry_run=True):

@@ -54,7 +54,8 @@ def overpass_query(lat, lng, radius, filters) -> list:
         r = requests.post(OVERPASS_URL, data={'data': query}, timeout=20)
         if r.status_code == 200:
             return r.json().get('elements', [])
-    except: pass
+    except (requests.RequestException, ValueError, KeyError, OSError):
+        pass
     return []
 
 
@@ -86,7 +87,8 @@ def get_mapillary_image(lat: float, lng: float) -> str | None:
                     return haversine(lat, lng, coords[1], coords[0])
                 closest = min(imgs, key=dist)
                 return closest.get('thumb_1024_url')
-    except: pass
+    except (requests.RequestException, ValueError, KeyError, OSError):
+        pass
     return None
 
 
@@ -126,7 +128,7 @@ FACADE_NOTES: [2 sentences describing what you see — building age, maintenance
         score_raw = g('FACADE_SCORE')
         try:
             score = int(re.search(r'\d+', score_raw).group())
-        except:
+        except (AttributeError, ValueError, TypeError):
             score = None
 
         return {
@@ -240,7 +242,8 @@ def main():
     with open(LISTINGS_FILE) as f:   listings = {l['id']: l for l in json.load(f)}
     try:
         with open(COMMERCE_FILE) as f: commerce = {c['id']: c for c in json.load(f)}
-    except: commerce = {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        commerce = {}
 
     geo_map = {g['id']: g for g in geo_list}
 

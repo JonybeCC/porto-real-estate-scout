@@ -117,7 +117,7 @@ def parse_assessment(text):
             if key == 'condition_score':
                 try:
                     val = int(val)
-                except:
+                except (ValueError, TypeError):
                     val = 0
             result[key] = val
     result['raw'] = text

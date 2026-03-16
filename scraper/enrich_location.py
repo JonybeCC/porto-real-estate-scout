@@ -1,9 +1,27 @@
 #!/usr/bin/env python3
 """
-Location Enricher v2 — JBizz Assistant 🦞
-Single-pass Overpass query per listing (was 3 separate = 3× slower).
-Fetches: parks, hospitals, bus stops, noise sources, schools — all in one query.
-Also runs description signal extraction (furnished, AC, suite, renovation, etc.)
+Location Enricher v3 — JBizz Assistant 🦞  ★ CANONICAL AUTHORITY for geocoded.json ★
+
+This is the SINGLE SOURCE OF TRUTH for all location-derived fields.
+It is the ONLY script that writes enrichment data to geocoded.json.
+Do NOT add location enrichment to other scripts — add it here.
+
+What it enriches (per listing, stored in geocoded.json):
+  Geocoding:     lat, lng, dist_to_sea/foz/centre (written by geocode.py, READ-ONLY here)
+  Elevation:     elevation_m, walk_time_sea_min     (from enrich_geo.py on first run)
+  Overpass/OSM:  parks_800m, nearest_park
+                 hospitals_3km, nearest_hospital, nearest_hospital_km
+                 bus_stops_400m
+                 noise_penalty, noise_sources
+  Schools:       school_score, nearest_good_school, nearest_school_km
+  Commerce tier: supermarket_tier                   (from commerce.json nearest_supermarket)
+  Desc signals:  is_furnished, kitchen_equipped, has_suite, has_fireplace, has_ac,
+                 has_pool, has_concierge, light_mentioned, double_glazing,
+                 renovation_year, description_bonus_pts
+
+Superseded (archived to scraper/_deprecated/):
+  - enrich_advanced.py     (subset of the above)
+  - enrich_noise_schools.py (subset of the above)
 """
 
 import json, os, time, math, re, requests
@@ -48,10 +66,10 @@ def haversine(lat1, lng1, lat2, lng2) -> float:
 
 
 OVERPASS_MIRRORS = [
-    'https://overpass.private.coffee/api/interpreter',    # most reliable
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-    'https://overpass-api.de/api/interpreter',            # main (often overloaded)
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',  # fast + reliable
+    'https://overpass-api.de/api/interpreter',                   # main (occasionally 504)
+    'https://overpass.private.coffee/api/interpreter',           # sometimes down
+    'https://overpass.kumi.systems/api/interpreter',             # sometimes down
 ]
 
 def overpass_request(query: str) -> list:
@@ -62,7 +80,8 @@ def overpass_request(query: str) -> list:
                 r = requests.post(mirror, data={'data': query}, timeout=25)
                 if r.status_code == 200:
                     return r.json().get('elements', [])
-            except: pass
+            except (requests.RequestException, ValueError, KeyError):
+                pass
             time.sleep(1)
     return []
 
@@ -296,7 +315,20 @@ def enrich_one(g: dict, listings: dict, details: dict, commerce: dict) -> dict:
     return g
 
 
+def save_checkpoint(geo_map, commerce, done, total, force=False):
+    """Save geo + commerce. Called every 10 listings and on SIGTERM."""
+    with open(GEO_FILE, 'w') as f:
+        json.dump(list(geo_map.values()), f, ensure_ascii=False, indent=2)
+    with open(COMMERCE_FILE, 'w') as f:
+        json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
+    if force:
+        print(f'  💾 SIGTERM checkpoint saved ({done}/{total})', flush=True)
+    else:
+        print(f'  💾 Checkpoint ({done}/{total})', flush=True)
+
+
 def main():
+    import signal
     from concurrent.futures import ThreadPoolExecutor, as_completed
     import threading
 
@@ -311,7 +343,8 @@ def main():
     with open(LISTINGS_FILE) as f: listings = {l['id']: l for l in json.load(f)}
     try:
         with open(COMMERCE_FILE) as f: commerce = {c['id']: c for c in json.load(f)}
-    except: commerce = {}
+    except (FileNotFoundError, json.JSONDecodeError):
+        commerce = {}
 
     geo_map = {g['id']: g for g in geo_list}
 
@@ -324,7 +357,14 @@ def main():
     print(f'📦 {total} listings need enrichment (~{est} min at {CONCURRENCY}x parallel)\n')
 
     lock = threading.Lock()
-    done = 0
+    done_ref = [0]  # mutable for signal handler closure
+
+    # SIGTERM handler: save progress before dying
+    def _on_sigterm(signum, frame):
+        with lock:
+            save_checkpoint(geo_map, commerce, done_ref[0], total, force=True)
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
         futures = {ex.submit(enrich_one, g, listings, details, commerce): g['id'] for g in to_enrich}
@@ -343,7 +383,8 @@ def main():
                                       'has_ac','has_pool','has_concierge','double_glazing',
                                       'renovation_year','description_bonus_pts']:
                             commerce[lid][field] = result.get(field)
-                    done += 1
+                    done_ref[0] += 1
+                    done = done_ref[0]
 
                     flags = []
                     if result.get('parks_800m', 0) > 0:            flags.append(f'🌳{result["parks_800m"]}')
@@ -358,22 +399,16 @@ def main():
                     if bonus > 0: flags.append(f'+{bonus}pts')
                     print(f'  [{done:3d}/{total}] {lid} {" ".join(flags) or "basic"}', flush=True)
 
-                    if done % 20 == 0:
-                        with open(GEO_FILE, 'w') as f:
-                            json.dump(list(geo_map.values()), f, ensure_ascii=False, indent=2)
-                        with open(COMMERCE_FILE, 'w') as f:
-                            json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
-                        print(f'  💾 Checkpoint ({done}/{total})', flush=True)
+                    if done % 10 == 0:  # checkpoint every 10 (was 20) for better SIGTERM resilience
+                        save_checkpoint(geo_map, commerce, done, total)
 
             except Exception as e:
-                with lock: done += 1
-                print(f'  ⚠️  [{done}/{total}] {lid}: {str(e)[:60]}', flush=True)
+                with lock:
+                    done_ref[0] += 1
+                print(f'  ⚠️  [{done_ref[0]}/{total}] {lid}: {str(e)[:60]}', flush=True)
 
     # Final save
-    with open(GEO_FILE, 'w') as f:
-        json.dump(list(geo_map.values()), f, ensure_ascii=False, indent=2)
-    with open(COMMERCE_FILE, 'w') as f:
-        json.dump(list(commerce.values()), f, ensure_ascii=False, indent=2)
+    save_checkpoint(geo_map, commerce, done_ref[0], total)
 
     gv = list(geo_map.values())
     print(f'\n✅ Done — {done}/{total} enriched')

@@ -29,7 +29,7 @@ def get_elevation(lat, lng):
             results = r.json().get('results', [])
             if results:
                 return round(results[0].get('elevation', 0), 1)
-    except:
+    except (requests.RequestException, ValueError, KeyError):
         pass
     return None
 
@@ -53,7 +53,7 @@ def get_walk_time(lat, lng, dest_lat=SEA_LAT, dest_lng=SEA_LNG):
                 if routes:
                     secs = routes[0]['summary']['duration']
                     return round(secs / 60, 1)
-        except:
+        except (requests.RequestException, ValueError, KeyError):
             pass
 
     # Fallback: straight-line distance with Porto terrain factor
@@ -81,7 +81,7 @@ def opencage_geocode(address, api_key):
             if results:
                 geom = results[0]['geometry']
                 return geom['lat'], geom['lng'], 'opencage'
-    except:
+    except (requests.RequestException, ValueError, KeyError):
         pass
     return None, None, None
 

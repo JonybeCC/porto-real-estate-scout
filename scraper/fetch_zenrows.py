@@ -9,7 +9,7 @@ Changes from v2:
   - Re-fetches no-photo entries to try XHR extraction
 """
 
-import json, re, os, time
+import json, re, os, time, signal, threading
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
@@ -233,7 +233,7 @@ def parse(html: str, xhr: list, lid: str) -> dict:
             if m and key not in d:
                 try:
                     d[key] = float(m.group(1).replace(',', '.'))
-                except:
+                except (ValueError, AttributeError):
                     pass
 
     # ── WCs ───────────────────────────────────────────────────────────────────
@@ -339,6 +339,16 @@ def main():
     # Track failures for summary
     blocked, deleted, timeouts, errors = [], [], [], []
     done = 0
+    lock = threading.Lock()
+
+    # SIGTERM handler — flush progress before dying
+    def _on_sigterm(signum, frame):
+        details_list = list(existing.values())
+        with open(DETAILS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(details_list, f, ensure_ascii=False, indent=2)
+        print(f'\n💾 SIGTERM — saved {len(details_list)} entries to {DETAILS_FILE}', flush=True)
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
         futures = {

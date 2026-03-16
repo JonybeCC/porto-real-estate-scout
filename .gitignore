@@ -1,7 +1,23 @@
-data/
-credentials/
+# Data files (too large, sensitive)
+data/*.json
+data/*.csv
+data/*.log
+data/*.bak
+data/*.bak3
+data/pipeline.pid
+data/pipeline.lock
+data/pipeline_run.log*
+
+# API keys
+.env
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
-.env
-*.json.bak*
+scraper/__pycache__/
+
+# Backup files
+*.bak
+*.bak3
+data/test_*.jpg
