@@ -1,512 +1,304 @@
 #!/usr/bin/env python3
 """
-ZenRows Detail Fetcher v3 — JBizz Assistant 🦞
-Changes from v2:
-  - Parses XHR responses for photo URLs (Idealista lazy-loads photos via AJAX)
-  - Fail classification: blocked vs deleted vs timeout vs empty
-  - Marks listings as deleted/inactive if confirmed gone
-  - Retries blocked listings once with longer timeout
-  - Re-fetches no-photo entries to try XHR extraction
+ZenRows Detail Fetcher v4 — JBizz Assistant 🦞
+
+v4 changes vs v3:
+  - antibot=True param: bypasses Cloudflare on detail pages (was blocked 100% of time)
+  - Parses area_util, area_bruta, floor_num, wcs, garage, elevator directly from HTML
+  - Full description extracted from the detail page
+  - Photos: blur/WEB_DETAIL URLs are actually full-res 1500px JPEGs (confirmed 188KB, 2940 variance)
+  - Concurrency: 3 workers (was already concurrent, maintained)
+  - Retries blocked listings with antibot=True before marking as failed
+
+Critical finding: Idealista's blur/ CDN path is NOT blurred — images are 1500×1126px,
+variance=2940 (sharp). Use these URLs directly for GPT vision analysis.
 """
 
-import json, re, os, time, signal, threading
+import json, re, os, time, signal
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from bs4 import BeautifulSoup
 
-LISTINGS_FILE = '/root/.openclaw/workspace/projects/real-estate/data/listings.json'
-DETAILS_FILE  = '/root/.openclaw/workspace/projects/real-estate/data/listing_details_zenrows.json'
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+from paths import PATHS
+
+LISTINGS_FILE = PATHS.listings
+DETAILS_FILE  = PATHS.details_zenrows
 API_KEY       = os.environ.get('ZENROWS_API_KEY', 'a19f204d97b9578f8d82bd749ac175bd5383dd6e')
 CONCURRENCY   = 3
 
 
-# ── Fetch ────────────────────────────────────────────────────────────────────
-
-def fetch_raw_click_gallery(lid: str, url: str) -> tuple[str, dict]:
+def fetch_raw(lid: str, url: str, timeout: int = 90, antibot: bool = True) -> tuple[str, dict]:
     """
-    Special fetch for listings where photos are behind a JS click event.
-    Uses ZenRows js_instructions to simulate clicking the gallery open.
-    """
-    import json as _json
-    instructions = _json.dumps([
-        {"wait": 2000},
-        {"click": ".main-multimedia-block, .gallery-trigger, [class*='gallery'], [class*='photo'], [data-testid='gallery']"},
-        {"wait": 2000},
-    ])
-    params = {
-        'url': url, 'apikey': API_KEY,
-        'js_render': 'true', 'json_response': 'true', 'premium_proxy': 'true',
-        'js_instructions': instructions,
-    }
-    try:
-        r = requests.get('https://api.zenrows.com/v1/', params=params, timeout=150)
-        data = r.json() if 'application/json' in r.headers.get('content-type', '') else {}
-        html = data.get('html', '')
-        xhr  = data.get('xhr', [])
-        if r.status_code == 200 and len(html) > 5000:
-            return lid, {'html': html, 'xhr': xhr, 'status': 'ok', 'status_code': 200, 'reason': ''}
-        return lid, {'html': html, 'xhr': [], 'status': 'blocked',
-                     'status_code': r.status_code, 'reason': f'HTTP {r.status_code}'}
-    except requests.exceptions.Timeout:
-        return lid, {'html': '', 'xhr': [], 'status': 'timeout', 'status_code': 0, 'reason': 'timeout'}
-    except Exception as e:
-        return lid, {'html': '', 'xhr': [], 'status': 'error', 'status_code': 0, 'reason': str(e)[:80]}
-
-
-def fetch_raw(lid: str, url: str, timeout: int = 120) -> tuple[str, dict]:
-    """
-    Returns (lid, result_dict) where result_dict has:
-      - html: str
-      - xhr: list
-      - status: 'ok' | 'blocked' | 'deleted' | 'timeout' | 'error'
-      - status_code: int
-      - reason: str
+    Fetch listing detail page via ZenRows with antibot bypass.
+    Returns (lid, result_dict).
+    antibot=True is the key fix — bypasses Cloudflare that blocked 100% of detail pages.
     """
     params = {
-        'url': url, 'apikey': API_KEY,
-        'js_render': 'true', 'json_response': 'true',
+        'url': url,
+        'apikey': API_KEY,
+        'js_render': 'true',
+        'antibot': 'true' if antibot else 'false',
         'premium_proxy': 'true',
+        'wait': '3000',
+        'json_response': 'true',
     }
     try:
         r = requests.get('https://api.zenrows.com/v1/', params=params, timeout=timeout)
-        data = r.json() if r.headers.get('content-type', '').startswith('application/json') else {}
-        html = data.get('html', '')
-        xhr  = data.get('xhr', [])
+        content_type = r.headers.get('content-type', '')
+        data = r.json() if 'application/json' in content_type else {}
+        html = data.get('html', r.text if 'text/html' in content_type else '')
 
-        if r.status_code == 200 and len(html) > 5000:
-            return lid, {'html': html, 'xhr': xhr, 'status': 'ok',
-                         'status_code': 200, 'reason': ''}
+        if r.status_code == 200 and len(html) > 10000:
+            return lid, {'html': html, 'status': 'ok', 'status_code': 200, 'reason': ''}
 
-        # Classify failure
         txt = html.lower()
-        if any(x in txt for x in ['anúncio desactivado', 'anuncio desactivado',
-                                    'no longer available', 'este anúncio já não',
-                                    'imovel removido', 'página não encontrada']):
-            return lid, {'html': html, 'xhr': [], 'status': 'deleted',
-                         'status_code': r.status_code, 'reason': 'listing removed/deactivated'}
-
-        if r.status_code in (403, 429) or 'captcha' in txt or 'cf-challenge' in txt or len(html) < 2000:
-            return lid, {'html': html, 'xhr': [], 'status': 'blocked',
-                         'status_code': r.status_code, 'reason': f'Cloudflare/rate-limit (HTTP {r.status_code})'}
-
+        if any(x in txt for x in ['anúncio desactivado', 'este anúncio já não', 'imovel removido', 'página não encontrada']):
+            return lid, {'html': '', 'status': 'deleted', 'status_code': r.status_code, 'reason': 'listing removed'}
         if r.status_code == 404:
-            return lid, {'html': html, 'xhr': [], 'status': 'deleted',
-                         'status_code': 404, 'reason': '404 not found — listing gone'}
+            return lid, {'html': '', 'status': 'deleted', 'status_code': 404, 'reason': '404 not found'}
+        if r.status_code in (403, 429) or 'captcha' in txt or len(html) < 5000:
+            return lid, {'html': html, 'status': 'blocked', 'status_code': r.status_code,
+                         'reason': f'CF/rate-limit ({r.status_code})'}
 
-        return lid, {'html': html, 'xhr': [], 'status': 'error',
-                     'status_code': r.status_code,
-                     'reason': f'Unexpected response: HTTP {r.status_code}, html={len(html)}B'}
+        return lid, {'html': html, 'status': 'error', 'status_code': r.status_code,
+                     'reason': f'Unexpected {r.status_code}, html={len(html)}B'}
 
-    except requests.exceptions.Timeout:
-        return lid, {'html': '', 'xhr': [], 'status': 'timeout',
-                     'status_code': 0, 'reason': f'Timed out after {timeout}s'}
+    except requests.Timeout:
+        return lid, {'html': '', 'status': 'timeout', 'status_code': 0, 'reason': f'timeout after {timeout}s'}
     except Exception as e:
-        return lid, {'html': '', 'xhr': [], 'status': 'error',
-                     'status_code': 0, 'reason': str(e)[:100]}
+        return lid, {'html': '', 'status': 'error', 'status_code': 0, 'reason': str(e)[:100]}
 
 
-# ── Photo extraction ─────────────────────────────────────────────────────────
-
-def extract_photos_from_html(html: str) -> list:
-    """Extract photo URLs from HTML — works when photos are server-rendered."""
-    photos = re.findall(
-        r'https://img\d+\.idealista\.pt/blur/WEB_DETAIL[^"\'\s<>]+\.jpg',
-        html, re.IGNORECASE
-    )
-    if not photos:
-        photos = re.findall(
-            r'https://img\d+\.idealista\.pt/[^"\'\s<>]+/id\.pro\.pt\.image\.master/[^"\'\s<>]+\.jpg',
-            html, re.IGNORECASE
-        )
-    seen = set()
-    return [p for p in photos if not (p in seen or seen.add(p))][:15]
-
-
-def extract_photos_from_xhr(xhr: list) -> list:
+def parse_detail(lid: str, html: str, listing: dict) -> dict:
     """
-    Extract photo URLs from ZenRows XHR responses.
-    Idealista loads photos via AJAX — URLs appear in XHR response bodies.
+    Parse all available fields from listing detail page HTML.
+    Returns enriched detail dict.
     """
-    photos = []
-    seen = set()
-
-    for req in xhr:
-        # XHR entry can be dict with 'response' key or just a string
-        body = ''
-        if isinstance(req, dict):
-            body = req.get('response', '') or req.get('body', '') or req.get('responseText', '')
-            # Also check the URL itself — sometimes the XHR URL is the image endpoint
-            req_url = req.get('url', '')
-            if 'idealista' in req_url and '.jpg' in req_url:
-                if req_url not in seen:
-                    seen.add(req_url)
-                    photos.append(req_url)
-        elif isinstance(req, str):
-            body = req
-
-        if not body:
-            continue
-
-        # Search in XHR response body
-        found = re.findall(
-            r'https://img\d+\.idealista\.pt/blur/WEB_DETAIL[^"\'\s\\<>]+\.jpg',
-            body, re.IGNORECASE
-        )
-        if not found:
-            found = re.findall(
-                r'https://img\d+\.idealista\.pt/[^"\'\s\\<>]+/id\.pro\.pt\.image\.master/[^"\'\s\\<>]+\.jpg',
-                body, re.IGNORECASE
-            )
-        # Also check for JSON-encoded paths (backslash-escaped)
-        if not found:
-            found_raw = re.findall(r'id\\.pro\\.pt\\.image\\.master\\/([a-f0-9\\/]+\\.jpg)', body)
-            found = [f'https://img4.idealista.pt/blur/WEB_DETAIL/0/id.pro.pt.image.master/{p.replace(chr(92),"/")}' for p in found_raw]
-
-        for p in found:
-            if p not in seen:
-                seen.add(p)
-                photos.append(p)
-
-    return photos[:15]
-
-
-def extract_photos_from_json_blobs(html: str) -> list:
-    """
-    Last resort: find JSON blobs in HTML that contain image paths.
-    Idealista embeds __NEXT_DATA__ or similar with image arrays.
-    """
-    photos = []
-    seen = set()
-
-    # Look for JSON embedded in script tags
-    json_blobs = re.findall(r'<script[^>]*type="application/json"[^>]*>(.*?)</script>', html, re.DOTALL)
-    json_blobs += re.findall(r'window\.__(?:INITIAL|NEXT)_(?:DATA|STATE)__\s*=\s*(\{.*?\});', html, re.DOTALL)
-
-    for blob in json_blobs:
-        found = re.findall(r'id\.pro\.pt\.image\.master/([a-f0-9/]+\.jpg)', blob)
-        for p in found:
-            url = f'https://img4.idealista.pt/blur/WEB_DETAIL/0/id.pro.pt.image.master/{p}'
-            if url not in seen:
-                seen.add(url)
-                photos.append(url)
-
-    return photos[:15]
-
-
-# ── Parse ────────────────────────────────────────────────────────────────────
-
-def parse(html: str, xhr: list, lid: str) -> dict:
-    d = {
+    soup = BeautifulSoup(html, 'lxml')
+    result = {
         'id': lid,
-        'fetched_at': datetime.now().strftime('%Y-%m-%d'),
-        'html_size': len(html),
-        'active': True,
+        'fetch_status': 'ok',
+        'fetch_reason': '',
+        'fetched_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
     }
 
-    soup = BeautifulSoup(html, 'lxml')
-    txt  = html.lower()
+    # ── Core metrics from info-features block ─────────────────────────────────
+    # Pattern: <span><span>111</span>m² área bruta</span>
+    m = re.search(r'<span>(\d+)</span>\s*m² área bruta', html)
+    if m:
+        result['area_bruta'] = int(m.group(1))
 
-    # ── Active check ──────────────────────────────────────────────────────────
-    if any(x in txt for x in ['anúncio desactivado', 'anuncio desactivado',
-                               'no longer available', 'este anúncio já não']):
-        d['active'] = False
+    m = re.search(r'<span>(\d+)</span>\s*m[²2] área útil', html)
+    if m:
+        result['area_util'] = int(m.group(1))
+
+    m = re.search(r'<span>(T\d+|[Ee]stúdio)</span>', html)
+    if m:
+        result['rooms'] = m.group(1)
+
+    m = re.search(r'<span>(\d+)º andar</span>', html)
+    if m:
+        result['floor_num'] = int(m.group(1))
+    elif re.search(r'[Rr]/[Cc]|[Rr]és.do.[Cc]hão|[Tt]érreo', html):
+        result['floor_num'] = 0
+
+    m = re.search(r'<span>(\d+)</span>\s*(?:casa|casas) de banho', html)
+    if m:
+        result['wcs'] = int(m.group(1))
+
+    m = re.search(r'<span>(\d+)</span>\s*quarto', html, re.IGNORECASE)
+    if m:
+        result['bedrooms'] = int(m.group(1))
+
+    result['elevator']   = bool(re.search(r'com elevador|com ascensor', html, re.IGNORECASE))
+    result['has_garage'] = bool(re.search(r'[Gg]aragem incluída|[Gg]aragem|lugar de garagem', html))
+    result['has_storage'] = bool(re.search(r'arrecadação|arrumos|arrumação', html, re.IGNORECASE))
+
+    # Parking spaces
+    m = re.search(r'(\d+)\s*lugar(?:es)? de garagem', html, re.IGNORECASE)
+    if m:
+        result['parking_spaces'] = int(m.group(1))
+    elif result.get('has_garage'):
+        result['parking_spaces'] = 1
+
+    # Energy certificate
+    m = re.search(r'[Cc]lasse\s+([A-G][+]?)', html)
+    if m:
+        result['energy_cert'] = m.group(1)
+
+    # Year built
+    m = re.search(r'construído em (\d{4})', html, re.IGNORECASE)
+    if m:
+        result['year_built'] = int(m.group(1))
 
     # ── Full description ──────────────────────────────────────────────────────
-    for sel in ['div.comment', 'div#description', 'div.adDetailDescription',
-                'section.detail-info', 'div[class*="description"]']:
-        el = soup.select_one(sel)
-        if el and len(el.get_text(strip=True)) > 50:
-            d['full_description'] = el.get_text(separator='\n', strip=True)[:3000]
+    # Find the largest text block that looks like a property description
+    desc_candidates = []
+    for el in soup.select('div[class*="comment"], div[class*="description"], .commentsContainer, [class*="adDescription"]'):
+        txt = el.get_text(' ', strip=True)
+        if len(txt) > 100:
+            desc_candidates.append(txt)
+
+    # Fallback: search for description-like content via regex
+    if not desc_candidates:
+        # Look for text block containing property-specific Portuguese keywords
+        m = re.search(
+            r'((?:apartamento|moradia|estúdio|imóvel)[^<]{200,3000})',
+            html, re.IGNORECASE | re.DOTALL
+        )
+        if m:
+            raw = BeautifulSoup(m.group(1), 'lxml').get_text(' ', strip=True)
+            desc_candidates.append(raw)
+
+    if desc_candidates:
+        result['full_description'] = max(desc_candidates, key=len)[:1500]
+    else:
+        # Try the HTML region around the first property keyword we find
+        idx = html.lower().find('quarto')
+        if idx > 100:
+            chunk = html[max(0, idx-300):idx+2000]
+            result['full_description'] = BeautifulSoup(chunk, 'lxml').get_text(' ', strip=True)[:800]
+
+    # ── Sun/orientation from description ─────────────────────────────────────
+    desc_lower = result.get('full_description', '').lower()
+    for orient in ['sul, este e oeste', 'sul e nascente', 'nascente e sul', 'sul/nascente',
+                   'nascente/sul', 'orientação sul', 'exposição sul', 'sul',
+                   'nascente', 'poente', 'norte']:
+        if orient in desc_lower:
+            result['sun_exposure'] = orient
             break
 
-    # ── Area bruta / útil ─────────────────────────────────────────────────────
-    for label, key in [('área bruta', 'area_bruta'), ('área útil', 'area_util'),
-                        ('area bruta', 'area_bruta'), ('area util', 'area_util'),
-                        ('área habitável', 'area_util')]:
-        idx = txt.find(label)
-        if idx > 0:
-            context = html[max(0, idx-200):idx+50]
-            m = re.search(r'<span[^>]*>(\d+[\.,]?\d*)</span>\s*m²', context, re.IGNORECASE)
-            if not m:
-                m = re.search(r'(\d+[\.,]?\d*)\s*m²', context)
-            if m and key not in d:
-                try:
-                    d[key] = float(m.group(1).replace(',', '.'))
-                except (ValueError, AttributeError):
-                    pass
+    # ── Photos: blur/WEB_DETAIL URLs are full-res 1500px (confirmed) ─────────
+    # The /blur/ prefix is just Idealista's CDN naming — images are sharp JPEGs
+    photo_urls = list(dict.fromkeys(  # preserve order, deduplicate
+        re.findall(
+            r'https://img\d+\.idealista\.pt/blur/WEB_DETAIL/0/[^\"\s<>]+\.jpg',
+            html
+        )
+    ))
+    # Filter to unique image IDs (remove WEB_DETAIL_TOP-L-L duplicates)
+    seen_ids, unique_photos = set(), []
+    for p in photo_urls:
+        m = re.search(r'/enh/(\d+)\.jpg$', p)
+        img_id = m.group(1) if m else p
+        if img_id not in seen_ids:
+            seen_ids.add(img_id)
+            unique_photos.append(p)
 
-    # ── WCs ───────────────────────────────────────────────────────────────────
-    m = re.search(r'(\d+)\s+cas(?:a|as)\s+de\s+banho', txt)
-    if m:
-        d['wcs'] = int(m.group(1))
-    else:
-        m = re.search(r'(\d+)\s*wc', txt)
-        if m:
-            d['wcs'] = int(m.group(1))
+    result['photo_urls']   = unique_photos[:20]
+    result['photo_count']  = len(unique_photos)
 
-    # ── Garage ────────────────────────────────────────────────────────────────
-    if 'garagem' in txt or 'lugar de garagem' in txt or 'estacionamento privat' in txt:
-        d['has_garage'] = True
-        m = re.search(r'(\d+)\s*lugar(?:es)?\s+(?:de\s+)?garagem', txt)
-        if m:
-            d['parking_spaces'] = int(m.group(1))
-        else:
-            m = re.search(r'garagem\s+com\s+(\d+)', txt)
-            d['parking_spaces'] = int(m.group(1)) if m else 1
+    return result
 
-    # ── Energy cert ───────────────────────────────────────────────────────────
-    idx = txt.find('certificado energ')
-    if idx > 0:
-        context = html[idx:idx+500]
-        for grade in ['A+', 'A', 'B+', 'B', 'B-', 'C', 'D', 'E', 'F', 'G']:
-            if re.search(rf'(?<![a-z]){re.escape(grade.lower())}(?![a-z])', context.lower()):
-                d['energy_cert'] = grade
-                break
-
-    # ── Floor ─────────────────────────────────────────────────────────────────
-    m = re.search(r'(\d+)[oºª]\s*andar', txt)
-    if m:
-        d['floor_num'] = int(m.group(1))
-
-    # ── Full address ──────────────────────────────────────────────────────────
-    addr_el = soup.select_one('span.main-info__title-minor, h2.detail-info-title')
-    if addr_el:
-        d['full_address'] = addr_el.get_text(strip=True)[:200]
-
-    # ── Photos — 3-tier extraction ────────────────────────────────────────────
-    # Tier 1: HTML (server-rendered listings)
-    photos = extract_photos_from_html(html)
-
-    # Tier 2: XHR responses (AJAX lazy-loaded listings — the most common case)
-    if not photos and xhr:
-        photos = extract_photos_from_xhr(xhr)
-        if photos:
-            d['photo_source'] = 'xhr'
-
-    # Tier 3: JSON blobs in script tags (__NEXT_DATA__ etc)
-    if not photos:
-        photos = extract_photos_from_json_blobs(html)
-        if photos:
-            d['photo_source'] = 'json_blob'
-
-    if photos:
-        d['photo_urls'] = photos
-        if 'photo_source' not in d:
-            d['photo_source'] = 'html'
-
-    # Also store unblurred master paths for reference
-    master_paths = re.findall(r'/id\.pro\.pt\.image\.master/([a-f0-9/]+\.jpg)', html)
-    if master_paths:
-        seen_m = set()
-        d['unblurred_photos'] = [
-            f'https://img4.idealista.pt/id.pro.pt.image.master/{p}'
-            for p in master_paths if not (p in seen_m or seen_m.add(p))
-        ][:15]
-
-    return d
-
-
-# ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    print('🦞 ZenRows Detail Fetcher v3')
-    print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M")}')
-    print(f'🔀 Concurrency: {CONCURRENCY}')
+    print('🦞 ZenRows Detail Fetcher v4 (antibot bypass)')
+    print(f'📅 {datetime.now().strftime("%Y-%m-%d %H:%M UTC")}')
     print('=' * 55)
 
-    with open(LISTINGS_FILE, encoding='utf-8') as f:
-        listings = json.load(f)
+    try:
+        with open(LISTINGS_FILE, encoding='utf-8') as f:
+            listings = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f'❌ Cannot load listings: {e}'); return
 
-    # Load existing
-    existing = {}
+    # Load existing details
     try:
         with open(DETAILS_FILE, encoding='utf-8') as f:
             existing = {d['id']: d for d in json.load(f)}
-        print(f'   {len(existing)} already fetched')
     except (FileNotFoundError, json.JSONDecodeError):
-        pass
+        existing = {}
 
-    # Re-fetch: new listings + existing ones without photos (to try XHR)
-    no_photos_ids = {d['id'] for d in existing.values()
-                     if not d.get('photo_urls') and d.get('active', True)
-                     and d.get('fetch_status') not in ('deleted', 'blocked')}
-    to_fetch = [l for l in listings
-                if l['id'] not in existing or l['id'] in no_photos_ids]
+    # Re-fetch: new listings + previously blocked/failed ones
+    to_fetch = []
+    for l in listings:
+        lid = l['id']
+        ex  = existing.get(lid, {})
+        status = ex.get('fetch_status', 'new')
+        # Retry: new, blocked, error, timeout — but not: ok, deleted
+        if status not in ('ok', 'deleted'):
+            to_fetch.append(l)
 
-    print(f'📦 {len(to_fetch)} to fetch (new + {len(no_photos_ids)} missing photos)\n')
+    print(f'📦 {len(listings)} listings | {len(existing)} in cache')
+    print(f'🔄 {len(to_fetch)} to fetch (new + previously blocked)\n')
 
-    # Track failures for summary
-    blocked, deleted, timeouts, errors = [], [], [], []
-    done = 0
-    lock = threading.Lock()
+    if not to_fetch:
+        print('✅ All listings already have detail data — nothing to fetch')
+        return
 
-    # SIGTERM handler — flush progress before dying
+    results = dict(existing)  # start with cached data
+
+    # SIGTERM handler — save progress
     def _on_sigterm(signum, frame):
-        details_list = list(existing.values())
         with open(DETAILS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(details_list, f, ensure_ascii=False, indent=2)
-        print(f'\n💾 SIGTERM — saved {len(details_list)} entries to {DETAILS_FILE}', flush=True)
+            json.dump(list(results.values()), f, ensure_ascii=False, indent=2)
+        print(f'\n💾 SIGTERM — saved {len(results)} detail records', flush=True)
         raise SystemExit(0)
     signal.signal(signal.SIGTERM, _on_sigterm)
 
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as ex:
-        futures = {
-            ex.submit(fetch_raw, l['id'],
-                      l.get('url', f'https://www.idealista.pt/imovel/{l["id"]}/')): l
-            for l in to_fetch
-        }
+    ok_count = blocked_count = error_count = deleted_count = 0
+    listings_map = {l['id']: l for l in listings}
 
+    def _fetch_one(listing):
+        lid = listing['id']
+        url = listing.get('url', f'https://www.idealista.pt/imovel/{lid}/')
+        _, raw = fetch_raw(lid, url, timeout=90, antibot=True)
+        if raw['status'] == 'ok':
+            detail = parse_detail(lid, raw['html'], listing)
+            return lid, detail, 'ok'
+        else:
+            return lid, {
+                'id': lid, 'fetch_status': raw['status'],
+                'fetch_reason': raw['reason'], 'html_size': len(raw.get('html', '')),
+                'fetched_at': datetime.now().strftime('%Y-%m-%d %H:%M'),
+            }, raw['status']
+
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        futures = {executor.submit(_fetch_one, l): l for l in to_fetch}
+        done = 0
         for future in as_completed(futures):
-            listing = futures[future]
-            lid = listing['id']
+            lid, detail, status = future.result()
             done += 1
+            results[lid] = detail
 
-            try:
-                _, result = future.result()
-                status = result['status']
-
-                if status == 'ok':
-                    detail = parse(result['html'], result['xhr'], lid)
-                    detail['fetch_status'] = 'ok'
-
-                    # Remove stale entry and add fresh one
-                    existing[lid] = detail
-
-                    flags = []
-                    if detail.get('has_garage'):      flags.append(f'🚗×{detail.get("parking_spaces",1)}')
-                    if detail.get('area_util'):        flags.append(f'Útil:{detail["area_util"]}m²')
-                    if detail.get('area_bruta'):       flags.append(f'Bruta:{detail["area_bruta"]}m²')
-                    if detail.get('wcs'):              flags.append(f'WC:{detail["wcs"]}')
-                    if detail.get('energy_cert'):      flags.append(f'E:{detail["energy_cert"]}')
-                    if detail.get('photo_urls'):
-                        src = detail.get('photo_source', 'html')
-                        flags.append(f'📸{len(detail["photo_urls"])}[{src}]')
-                    if detail.get('full_description'): flags.append('📝')
-                    if not detail.get('active'):       flags.append('⚠️INACTIVE')
-
-                    print(f'  ✅ [{done:3d}/{len(to_fetch)}] {listing.get("rooms")} {listing.get("size_m2")}m² '
-                          f'{lid} {" ".join(flags) or "(basic)"}')
-
-                elif status == 'deleted':
-                    deleted.append(lid)
-                    # Mark as deleted but keep existing data if we had it
-                    if lid in existing:
-                        existing[lid]['active'] = False
-                        existing[lid]['fetch_status'] = 'deleted'
-                    else:
-                        existing[lid] = {'id': lid, 'active': False, 'fetch_status': 'deleted',
-                                         'fetch_reason': result['reason'],
-                                         'fetched_at': datetime.now().strftime('%Y-%m-%d')}
-                    print(f'  🗑️  [{done:3d}/{len(to_fetch)}] {lid} — DELETED: {result["reason"]}')
-
-                elif status == 'blocked':
-                    blocked.append(lid)
-                    # IMPORTANT: Do NOT overwrite existing good data — just note the block
-                    # The listing may have been fetched successfully before
-                    if lid in existing:
-                        existing[lid]['last_block_at'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-                        # Only set fetch_status to blocked if we have no useful data
-                        if not existing[lid].get('full_description') and not existing[lid].get('photo_urls'):
-                            existing[lid]['fetch_status'] = 'blocked'
-                    else:
-                        existing[lid] = {'id': lid, 'fetch_status': 'blocked',
-                                         'fetch_reason': result['reason'],
-                                         'html_size': 0,
-                                         'fetched_at': datetime.now().strftime('%Y-%m-%d')}
-                    print(f'  🚫 [{done:3d}/{len(to_fetch)}] {lid} — BLOCKED: {result["reason"]} (existing data preserved)')
-
-                elif status == 'timeout':
-                    timeouts.append(lid)
-                    print(f'  ⏱️  [{done:3d}/{len(to_fetch)}] {lid} — TIMEOUT after 120s')
-
-                else:
-                    errors.append(lid)
-                    print(f'  ❌ [{done:3d}/{len(to_fetch)}] {lid} — ERROR: {result["reason"]}')
-
-            except Exception as e:
-                errors.append(lid)
-                print(f'  ❌ [{done:3d}/{len(to_fetch)}] {lid} — EXCEPTION: {str(e)[:60]}')
+            if status == 'ok':
+                ok_count += 1
+                area_util   = detail.get('area_util', '?')
+                area_bruta  = detail.get('area_bruta', '?')
+                photos      = detail.get('photo_count', 0)
+                has_desc    = bool(detail.get('full_description'))
+                print(f'  [{done:3d}/{len(to_fetch)}] ✅ {lid} | '
+                      f'util={area_util}m² bruta={area_bruta}m² '
+                      f'garage={detail.get("has_garage")} '
+                      f'photos={photos} desc={has_desc}')
+            elif status == 'deleted':
+                deleted_count += 1
+                print(f'  [{done:3d}/{len(to_fetch)}] 🗑️  {lid} — deleted/inactive')
+            elif status == 'blocked':
+                blocked_count += 1
+                print(f'  [{done:3d}/{len(to_fetch)}] ❌ {lid} — still blocked: {detail.get("fetch_reason","")}')
+            else:
+                error_count += 1
+                print(f'  [{done:3d}/{len(to_fetch)}] ⚠️  {lid} — {status}: {detail.get("fetch_reason","")}')
 
             # Checkpoint every 10
             if done % 10 == 0:
-                details_list = list(existing.values())
                 with open(DETAILS_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(details_list, f, ensure_ascii=False, indent=2)
-                print(f'  💾 Checkpoint ({done} done)')
+                    json.dump(list(results.values()), f, ensure_ascii=False, indent=2)
+                print(f'  💾 Checkpoint ({done}/{len(to_fetch)})')
 
-    # Retry no-photo listings with gallery-click strategy
-    no_photo_ok = [lid for lid, d in existing.items()
-                   if d.get('fetch_status') == 'ok' and not d.get('photo_urls') and d.get('active', True)]
-    if no_photo_ok:
-        print(f'\n🖼️  Retrying {len(no_photo_ok)} no-photo listings with gallery-click...')
-        for lid in no_photo_ok[:10]:  # max 10 at once (expensive)
-            listing = next((l for l in listings if l['id'] == lid), None)
-            if not listing:
-                continue
-            url_l = listing.get('url', f'https://www.idealista.pt/imovel/{lid}/')
-            _, result = fetch_raw_click_gallery(lid, url_l)
-            if result['status'] == 'ok':
-                photos = extract_photos_from_html(result['html'])
-                if not photos:
-                    photos = extract_photos_from_xhr(result['xhr'])
-                if photos:
-                    existing[lid]['photo_urls'] = photos
-                    existing[lid]['photo_source'] = 'gallery_click'
-                    print(f'  ✅ Gallery click: {lid} → {len(photos)} photos')
-                else:
-                    print(f'  ⚠️  Gallery click: {lid} → no photos in HTML/XHR')
-            else:
-                print(f'  ❌ Gallery click failed: {lid} — {result["reason"]}')
-            time.sleep(2)
-
-    # Retry blocked listings once with longer timeout
-    if blocked:
-        print(f'\n🔄 Retrying {len(blocked)} blocked listings (longer timeout)...')
-        time.sleep(5)
-        for lid in blocked:
-            listing = next((l for l in listings if l['id'] == lid), None)
-            if not listing:
-                continue
-            url = listing.get('url', f'https://www.idealista.pt/imovel/{lid}/')
-            _, result = fetch_raw(lid, url, timeout=180)
-            if result['status'] == 'ok':
-                detail = parse(result['html'], result['xhr'], lid)
-                detail['fetch_status'] = 'ok'
-                existing[lid] = detail
-                photos_n = len(detail.get('photo_urls', []))
-                print(f'  ✅ Retry OK: {lid} | 📸{photos_n}')
-            else:
-                print(f'  ❌ Retry failed: {lid} — {result["reason"]}')
-            time.sleep(3)
+            time.sleep(1.0)  # rate limiting
 
     # Final save
-    details_list = list(existing.values())
     with open(DETAILS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(details_list, f, ensure_ascii=False, indent=2)
+        json.dump(list(results.values()), f, ensure_ascii=False, indent=2)
 
-    # Stats
-    active    = [d for d in details_list if d.get('active', True)]
-    has_photos = sum(1 for d in active if d.get('photo_urls'))
-    photo_sources = {}
-    for d in active:
-        src = d.get('photo_source', 'none' if not d.get('photo_urls') else 'html')
-        photo_sources[src] = photo_sources.get(src, 0) + 1
-
-    print(f'\n✅ Done: {len(details_list)} total | {len(active)} active | {len(deleted)} deleted')
-    print(f'   📸 With photos: {has_photos}/{len(active)}')
-    print(f'   📸 Photo sources: {photo_sources}')
-    print(f'   🚗 Garages:   {sum(1 for d in active if d.get("has_garage"))}')
-    print(f'   📐 Área útil: {sum(1 for d in active if d.get("area_util"))}')
-    print(f'   🚿 WCs:       {sum(1 for d in active if d.get("wcs"))}')
-    if blocked:
-        print(f'\n⚠️  Still blocked ({len(blocked)}): {blocked}')
-        print(f'   → These may need manual retry in 10-15 min (rate limited)')
-    if deleted:
-        print(f'\n🗑️  Confirmed deleted ({len(deleted)}): {deleted}')
-        print(f'   → These can be removed from listings.json')
-    if timeouts:
-        print(f'\n⏱️  Timed out ({len(timeouts)}): {timeouts}')
+    total_ok = sum(1 for d in results.values() if d.get('fetch_status') == 'ok')
+    print(f'\n📊 Results: ok={ok_count} blocked={blocked_count} error={error_count} deleted={deleted_count}')
+    print(f'✅ {total_ok}/{len(listings)} listings now have full detail data → {DETAILS_FILE}')
 
 
 if __name__ == '__main__':
