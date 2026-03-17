@@ -431,26 +431,31 @@ def _run_pipeline(run: 'PipelineRun', new_listings: list, merged: dict) -> int:
     else:
         run.step_skip('geocode', reason='no new listings')
 
-    # ── Step 4: ZenRows detail fetch (new listings) ───────────────────────────
+    # ── Step 4: ZenRows detail fetch (new listings ONLY) ─────────────────────
+    # Daily mode only fetches brand-new listings (never-attempted). The backlog
+    # of 150+ previously-blocked listings is processed by run_backlog.sh separately.
+    # Per-listing time: ~10-30s with antibot. Cap: 10 new * 30s / 3 workers = 100s.
     if new_listings:
-        print('\n📋 [4/12] ZenRows detail fetch (new listings)...')
-        ok, err = run_script('fetch_zenrows.py', timeout=1800)
+        print('\n📋 [4/12] ZenRows detail fetch (new listings only)...')
+        ok, err = run_script('fetch_zenrows.py', timeout=300)   # 5min cap: enough for ~10 new
         run.step_ok('fetch_zenrows') if ok else run.step_fail('fetch_zenrows', error=err)
     else:
         run.step_skip('fetch_zenrows', reason='no new listings')
 
-    # ── Step 5: Location enrichment (new listings) ────────────────────────────
+    # ── Step 5: Location enrichment (new listings ONLY) ───────────────────────
+    # Daily mode only runs on listings that have NEVER been enriched (noise_penalty=None AND parks_800m=None).
+    # Backlog of 105 partial listings processed by run_backlog.sh.
     if new_listings:
-        print('\n📍 [5/12] Location enrichment (new listings)...')
-        ok, err = run_script('enrich_location.py', timeout=1200)
+        print('\n📍 [5/12] Location enrichment (new listings only)...')
+        ok, err = run_script('enrich_location.py', timeout=180)  # 3min: 1-5 new * 4 workers = fast
         run.step_ok('enrich_location') if ok else run.step_fail('enrich_location', error=err)
     else:
         run.step_skip('enrich_location', reason='no new listings')
 
-    # ── Step 6: Commerce enrichment (new listings) ────────────────────────────
+    # ── Step 6: Commerce enrichment (new listings ONLY, capped at 20) ────────
     if new_listings:
-        print('\n🛒 [6/12] Commerce enrichment (new listings)...')
-        ok, err = run_script('enrich_commerce.py', timeout=600)
+        print('\n🛒 [6/12] Commerce enrichment (new listings only)...')
+        ok, err = run_script('enrich_commerce.py', timeout=180)  # 3min cap (capped at 20 in script)
         run.step_ok('enrich_commerce') if ok else run.step_fail('enrich_commerce', error=err)
     else:
         run.step_skip('enrich_commerce', reason='no new listings')

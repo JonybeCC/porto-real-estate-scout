@@ -348,13 +348,37 @@ def main():
 
     geo_map = {g['id']: g for g in geo_list}
 
-    to_enrich = [g for g in geo_list if g.get('lat') and
-                 (g.get('noise_penalty') is None or g.get('parks_800m') is None or
-                  g.get('school_score') is None or g.get('is_furnished') is None)]
+    # Mode selection (mirrors fetch_zenrows pattern):
+    #   --backlog : process ALL missing-enrichment listings (slow, run separately)
+    #   default   : only process listings that have NEVER been enriched (no keys at all)
+    #
+    # This avoids the daily pipeline hanging for 20+ minutes on 105 backlog listings
+    # when only 1-5 new listings need enrichment.
+    import sys as _sys
+    backlog_mode = '--backlog' in _sys.argv
+
+    def needs_enrichment(g):
+        return (g.get('lat') and
+                (g.get('noise_penalty') is None or g.get('parks_800m') is None or
+                 g.get('school_score') is None or g.get('is_furnished') is None))
+
+    def is_new(g):
+        """True if this listing has never been through location enrichment at all."""
+        return g.get('lat') and g.get('noise_penalty') is None and g.get('parks_800m') is None
+
+    if backlog_mode:
+        to_enrich = [g for g in geo_list if needs_enrichment(g)]
+        mode_label = f'BACKLOG — all {len(to_enrich)} missing enrichment'
+    else:
+        to_enrich = [g for g in geo_list if is_new(g)]
+        backlog_count = sum(1 for g in geo_list if needs_enrichment(g) and not is_new(g))
+        mode_label = f'DAILY — {len(to_enrich)} new listings only'
+        if backlog_count:
+            mode_label += f' ({backlog_count} in backlog → run with --backlog)'
 
     total = len(to_enrich)
-    est   = max(1, total // CONCURRENCY) * 2  # rough minutes
-    print(f'📦 {total} listings need enrichment (~{est} min at {CONCURRENCY}x parallel)\n')
+    est   = max(1, total // CONCURRENCY) * 2
+    print(f'📦 {total} listings need enrichment [{mode_label}] (~{est} min)\n')
 
     lock = threading.Lock()
     done_ref = [0]  # mutable for signal handler closure

@@ -30,12 +30,17 @@ API_KEY       = os.environ.get('ZENROWS_API_KEY', 'a19f204d97b9578f8d82bd749ac17
 CONCURRENCY   = 3
 
 
-def fetch_raw(lid: str, url: str, timeout: int = 90, antibot: bool = True) -> tuple[str, dict]:
+def fetch_raw(lid: str, url: str, timeout: int = 120, antibot: bool = True) -> tuple[str, dict]:
     """
     Fetch listing detail page via ZenRows with antibot bypass.
     Returns (lid, result_dict).
     antibot=True is the key fix — bypasses Cloudflare that blocked 100% of detail pages.
+
+    Note: ZenRows with antibot sometimes returns content-type=text/plain even when
+    the body is JSON. We try json.loads() regardless of content-type.
+    timeout=120 (was 90) — antibot requests take 6-30s, need headroom.
     """
+    import json as _json
     params = {
         'url': url,
         'apikey': API_KEY,
@@ -47,9 +52,17 @@ def fetch_raw(lid: str, url: str, timeout: int = 90, antibot: bool = True) -> tu
     }
     try:
         r = requests.get('https://api.zenrows.com/v1/', params=params, timeout=timeout)
-        content_type = r.headers.get('content-type', '')
-        data = r.json() if 'application/json' in content_type else {}
-        html = data.get('html', r.text if 'text/html' in content_type else '')
+        # ZenRows sometimes returns content-type=text/plain even for JSON responses.
+        # Always try JSON parse first, fall back to raw text.
+        data = {}
+        try:
+            data = r.json()
+        except Exception:
+            try:
+                data = _json.loads(r.text)
+            except Exception:
+                pass
+        html = data.get('html', r.text if not data else '')
 
         if r.status_code == 200 and len(html) > 10000:
             return lid, {'html': html, 'status': 'ok', 'status_code': 200, 'reason': ''}
@@ -212,18 +225,38 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         existing = {}
 
-    # Re-fetch: new listings + previously blocked/failed ones
+    # Mode selection:
+    #   --backlog : process ALL previously-blocked/failed listings (slow, run separately)
+    #   default   : only process NEW listings (never-seen-before) — fast, for daily pipeline
+    #
+    # This split is critical: daily run has ~1-5 new listings (seconds),
+    # backlog has ~150 listings (minutes). Mixing them caused 1800s timeout failures.
+    backlog_mode = '--backlog' in sys.argv
+
     to_fetch = []
     for l in listings:
         lid = l['id']
         ex  = existing.get(lid, {})
         status = ex.get('fetch_status', 'new')
-        # Retry: new, blocked, error, timeout — but not: ok, deleted
-        if status not in ('ok', 'deleted'):
-            to_fetch.append(l)
+        if backlog_mode:
+            # Backlog: retry everything except confirmed ok/deleted
+            if status not in ('ok', 'deleted'):
+                to_fetch.append(l)
+        else:
+            # Daily mode: ONLY new listings (never attempted before)
+            if status == 'new' or lid not in existing:
+                to_fetch.append(l)
 
+    mode_label = 'BACKLOG (all blocked/failed)' if backlog_mode else 'DAILY (new listings only)'
     print(f'📦 {len(listings)} listings | {len(existing)} in cache')
-    print(f'🔄 {len(to_fetch)} to fetch (new + previously blocked)\n')
+    print(f'🔄 {len(to_fetch)} to fetch [{mode_label}]')
+    if not backlog_mode:
+        backlog_count = sum(1 for l in listings
+                           if existing.get(l['id'], {}).get('fetch_status') not in ('ok', 'deleted', 'new')
+                           and l['id'] in existing)
+        if backlog_count:
+            print(f'   ℹ️  {backlog_count} previously-blocked listings in backlog → run with --backlog to process')
+    print()
 
     if not to_fetch:
         print('✅ All listings already have detail data — nothing to fetch')

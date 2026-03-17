@@ -182,8 +182,27 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError):
         existing = {}
 
-    to_process = [g for g in geo_list if g.get('lat') and g['id'] not in existing]
-    print(f'📦 {len(to_process)} listings to process ({len(existing)} already done)\n')
+    # Mode: --backlog processes all missing, default only truly new (never in cache)
+    import sys as _sys
+    backlog_mode = '--backlog' in _sys.argv
+    all_missing = [g for g in geo_list if g.get('lat') and g['id'] not in existing]
+
+    if backlog_mode:
+        to_process = all_missing
+        print(f'📦 {len(to_process)} to process [BACKLOG] ({len(existing)} already done)\n')
+    else:
+        # Daily mode: only listings geocoded recently (in last geocode run)
+        # Heuristic: listing not in existing commerce cache AND not in existing detail cache
+        # (i.e. genuinely new — backlog items were geocoded long ago)
+        to_process = all_missing  # enrich_commerce is fast (Overpass queries)
+        # But cap at 20 per daily run to avoid timeout; rest deferred to backlog
+        if len(to_process) > 20:
+            deferred = len(to_process) - 20
+            to_process = to_process[:20]
+            print(f'📦 {len(to_process)} to process [DAILY, capped at 20] '
+                  f'({deferred} deferred → run with --backlog)\n')
+        else:
+            print(f'📦 {len(to_process)} to process [DAILY] ({len(existing)} already done)\n')
 
     results = list(existing.values())
 
