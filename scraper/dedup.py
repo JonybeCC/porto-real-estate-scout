@@ -65,11 +65,13 @@ BOILERPLATE_PATTERNS = [
     r'^ligue para',
     r'^visita (?:virtual|online)',
     r'^exclusivo\s+[\w\s]+agência',
+    r'^comentário do anunciante',          # ZenRows page chrome — language selector boilerplate
+    r'^disponível em: português',          # same — scraper grabbed wrong DOM block
 ]
 
 
 def is_boilerplate(desc: str) -> bool:
-    """True if description is a generic agency template, not property-specific."""
+    """True if description is a generic agency template or page chrome, not property-specific."""
     if not desc:
         return True
     head = desc.lower().strip()[:120]
@@ -97,21 +99,32 @@ def extract_street(title: str, description: str) -> str:
 
 
 def extract_ref_codes(desc: str) -> list[str]:
-    """Extract internal reference codes from description text."""
+    """Extract internal reference codes from description text.
+
+    Bug fix: the \bIMO pattern was matching 'iMOBILIÁRIA' and extracting 'BILI'
+    as a false reference code, causing every listing mentioning a real estate agency
+    to be marked as a duplicate of every other. The pattern is now tightened to
+    require a word boundary AFTER the captured group, excluding common suffixes.
+    """
     if not desc:
         return []
     # Common patterns: Ref: ABC123, REF-XYZ, Referência: 12345, apor_250801
     patterns = [
         r'ref(?:erência|erencia|\.?)[:\s#\-]+([A-Z0-9_\-]{4,20})',
         r'\bapor_([A-Z0-9_\-]{4,20})',
-        r'\bIMO[-\s]?([A-Z0-9]{4,15})',
+        # IMO pattern tightened: requires explicit separator (space/dash/colon) after IMO
+        # to avoid matching 'iMOBILIÁRIA' -> was capturing 'BILI' as ref code
+        r'\bIMO[\s\-:]+([A-Z0-9]{4,15})\b',
         r'processo\s+n[oº]?[:\s]+([A-Z0-9\-/]{4,20})',
     ]
+    # Generic words that are never real ref codes (expanded from original)
+    SKIP_CODES = {'INTERNA', 'INTERNE', 'DISPONIVEL', 'BILI', 'BILIA', 'BILIAR',
+                  'BILIARIA', 'LIARIA', 'NACIONAL', 'PORTO', 'LISBOA'}
     codes = []
     for p in patterns:
         for m in re.finditer(p, desc, re.IGNORECASE):
             code = m.group(1).upper().strip()
-            if code not in ('INTERNA', 'INTERNE', 'INTERNE', 'DISPONIVEL'):  # skip generic words
+            if code not in SKIP_CODES and len(code) >= 4:
                 codes.append(code)
     return list(set(codes))
 

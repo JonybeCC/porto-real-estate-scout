@@ -149,24 +149,58 @@ def parse_detail(lid: str, html: str, listing: dict) -> dict:
 
     # ── Full description ──────────────────────────────────────────────────────
     # Find the largest text block that looks like a property description
+    # Boilerplate patterns to reject — ZenRows sometimes grabs page chrome
+    # instead of the actual listing description
+    BOILERPLATE_STARTS = (
+        'comentário do anunciante',
+        'disponível em: português',
+        'adicionar a tua nota',
+        'guardar favorito',
+    )
+
+    def is_real_description(txt: str) -> bool:
+        """True if text looks like an actual property description, not page chrome."""
+        tl = txt.lower().strip()
+        if len(txt) < 80:
+            return False
+        if any(tl.startswith(bp) for bp in BOILERPLATE_STARTS):
+            return False
+        # Must contain at least one property keyword
+        keywords = ['apartamento', 'moradia', 'quarto', 'cozinha', 'sala', 'wc',
+                    'arrendamento', 'garagem', 'varanda', 'andar', 'área', 'rua',
+                    'm²', 'euro', '€', 'divisão']
+        return any(kw in tl for kw in keywords)
+
     desc_candidates = []
     for el in soup.select('div[class*="comment"], div[class*="description"], .commentsContainer, [class*="adDescription"]'):
         txt = el.get_text(' ', strip=True)
-        if len(txt) > 100:
+        if is_real_description(txt):
             desc_candidates.append(txt)
 
-    # Fallback: search for description-like content via regex
+    # Fallback: regex for property-keyword-rich text block
     if not desc_candidates:
-        # Look for text block containing property-specific Portuguese keywords
         m = re.search(
-            r'((?:apartamento|moradia|estúdio|imóvel)[^<]{200,3000})',
+            r'((?:apartamento|moradia|estúdio|imóvel|arrendamento)[^<]{200,3000})',
             html, re.IGNORECASE | re.DOTALL
         )
         if m:
             raw = BeautifulSoup(m.group(1), 'lxml').get_text(' ', strip=True)
-            desc_candidates.append(raw)
+            if is_real_description(raw):
+                desc_candidates.append(raw)
+
+    # Last resort: find largest text block near property keywords
+    if not desc_candidates:
+        for kw in ['quarto', 'cozinha', 'varanda', 'elevador']:
+            idx = html.lower().find(kw)
+            if idx > 200:
+                chunk = html[max(0, idx - 500):idx + 2000]
+                txt = BeautifulSoup(chunk, 'lxml').get_text(' ', strip=True)
+                if is_real_description(txt):
+                    desc_candidates.append(txt)
+                    break
 
     if desc_candidates:
+        # Pick longest real description (not boilerplate)
         result['full_description'] = max(desc_candidates, key=len)[:1500]
     else:
         # Try the HTML region around the first property keyword we find

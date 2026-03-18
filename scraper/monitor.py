@@ -29,9 +29,9 @@ CREDS_FILE     = '/root/.openclaw/credentials/google-service-account.json'
 ZENROWS_KEY    = os.environ.get('ZENROWS_API_KEY', 'a19f204d97b9578f8d82bd749ac175bd5383dd6e')
 OPENAI_KEY     = os.environ.get('OPENAI_API_KEY', '')
 
-MIN_LISTINGS   = 80   # alert if we drop below this
+MIN_LISTINGS   = 40   # alert if we drop below this (was 80 — dedup brings ~59 real unique listings)
 MAX_LISTINGS   = 500  # alert if we spike above this (scraper bug?)
-MAX_RUN_AGE_H  = 28   # alert if last successful run was older than this
+MAX_RUN_AGE_H  = 36   # alert if last successful run was older than this (was 28 — allow weekend gaps)
 
 
 def _load(path, default):

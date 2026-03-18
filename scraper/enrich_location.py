@@ -363,8 +363,12 @@ def main():
                  g.get('school_score') is None or g.get('is_furnished') is None))
 
     def is_new(g):
-        """True if this listing has never been through location enrichment at all."""
-        return g.get('lat') and g.get('noise_penalty') is None and g.get('parks_800m') is None
+        """True if this listing has never been through v3 location enrichment.
+        Uses bus_stops_400m as the sentinel — it's only set by enrich_location v3.
+        Avoids false positives from older partial enrichment (school_score set but
+        noise/parks still None from earlier pipeline versions).
+        """
+        return g.get('lat') and g.get('bus_stops_400m') is None and g.get('school_score') is None
 
     if backlog_mode:
         to_enrich = [g for g in geo_list if needs_enrichment(g)]
