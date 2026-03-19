@@ -7,96 +7,149 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; display: flex; height: 100vh; overflow: hidden; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #0d0f18;
+  --surface:  #151825;
+  --surface2: #1c2032;
+  --border:   #252a40;
+  --text:     #e2e8f0;
+  --muted:    #64748b;
+  --accent:   #7c3aed;
+  --accent2:  #5b21b6;
+  --green:    #10b981;
+  --yellow:   #f59e0b;
+  --orange:   #f97316;
+  --red:      #ef4444;
+  --blue:     #3b82f6;
+}
 
-  /* ── Sidebar ── */
-  #sidebar { width: 360px; min-width: 320px; height: 100vh; display: flex; flex-direction: column; background: #1a1d27; border-right: 1px solid #2d3148; z-index: 1000; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
-  #sidebar-header { padding: 16px; border-bottom: 1px solid #2d3148; }
-  #sidebar-header h1 { font-size: 16px; font-weight: 700; color: #a78bfa; letter-spacing: 0.5px; }
-  #sidebar-header p { font-size: 11px; color: #64748b; margin-top: 3px; }
+/* ─── SIDEBAR ─────────────────────────────────────────────────────── */
+#sidebar { width: 380px; min-width: 320px; height: 100vh; display: flex; flex-direction: column; background: var(--surface); border-right: 1px solid var(--border); z-index: 1000; }
 
-  /* Filters */
-  #filters { padding: 12px 16px; border-bottom: 1px solid #2d3148; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .filter-group label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-  .filter-group select, .filter-group input { width: 100%; background: #0f1117; border: 1px solid #2d3148; color: #e2e8f0; padding: 6px 8px; border-radius: 6px; font-size: 12px; }
-  .filter-group.full { grid-column: 1 / -1; }
-  #apply-filters { grid-column: 1 / -1; background: #7c3aed; border: none; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
-  #apply-filters:hover { background: #6d28d9; }
+#sidebar-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+#sidebar-header h1 { font-size: 15px; font-weight: 700; color: #a78bfa; }
+#sidebar-header .subtitle { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.stats-pill { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.stats-pill span { color: #a78bfa; font-weight: 700; }
 
-  /* Stats bar */
-  #stats-bar { padding: 8px 16px; border-bottom: 1px solid #2d3148; font-size: 11px; color: #64748b; display: flex; gap: 12px; align-items: center; }
-  #stats-bar span { color: #a78bfa; font-weight: 600; }
+/* Filters */
+#filters { padding: 10px 14px; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.fg label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; display: block; margin-bottom: 3px; }
+.fg select, .fg input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-size: 12px; outline: none; }
+.fg select:focus, .fg input:focus { border-color: var(--accent); }
+.fg.full { grid-column: 1 / -1; }
+#apply-btn { grid-column: 1 / -1; background: var(--accent); border: none; color: white; padding: 8px; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; transition: background 0.15s; }
+#apply-btn:hover { background: var(--accent2); }
 
-  /* Listing list */
-  #listing-list { flex: 1; overflow-y: auto; }
-  #listing-list::-webkit-scrollbar { width: 4px; }
-  #listing-list::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 2px; }
+/* Listing list */
+#listing-list { flex: 1; overflow-y: auto; }
+#listing-list::-webkit-scrollbar { width: 3px; }
+#listing-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  .listing-card { padding: 12px 16px; border-bottom: 1px solid #1e2235; cursor: pointer; transition: background 0.15s; }
-  .listing-card:hover { background: #1e2235; }
-  .listing-card.active { background: #1e2235; border-left: 3px solid #7c3aed; }
+.card { padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; display: flex; gap: 11px; align-items: flex-start; }
+.card:hover { background: var(--surface2); }
+.card.active { background: var(--surface2); border-left: 3px solid var(--accent); padding-left: 11px; }
 
-  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .card-score { font-size: 20px; font-weight: 800; line-height: 1; }
-  .score-green  { color: #10b981; }
-  .score-yellow { color: #f59e0b; }
-  .score-orange { color: #f97316; }
-  .score-red    { color: #ef4444; }
+.card-score-col { text-align: center; min-width: 38px; }
+.cscore { font-size: 22px; font-weight: 900; line-height: 1; }
+.crank  { font-size: 9px; color: var(--muted); margin-top: 2px; }
 
-  .card-rank { font-size: 10px; color: #64748b; text-align: right; }
-  .card-price { font-size: 15px; font-weight: 700; color: #e2e8f0; }
-  .card-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
-  .card-neighborhood { font-size: 12px; color: #7c9cd1; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
-  .badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
-  .badge-sea   { background: #0e4f7a; color: #7dd3fc; }
-  .badge-garage { background: #1a3a1a; color: #86efac; }
-  .badge-storage { background: #2d2010; color: #fcd34d; }
-  .badge-sun   { background: #3d2a00; color: #fbbf24; }
-  .badge-school { background: #1e1a3d; color: #c4b5fd; }
-  .badge-noise { background: #3d1a1a; color: #fca5a5; }
+.card-body { flex: 1; min-width: 0; }
+.card-price { font-size: 14px; font-weight: 700; }
+.card-rooms { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.card-neigh { font-size: 11px; color: #7c9cd1; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-tags  { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.tag { font-size: 9px; padding: 2px 5px; border-radius: 3px; font-weight: 600; }
+.t-sea   { background:#0c3f5a; color:#7dd3fc; }
+.t-gar   { background:#14301a; color:#86efac; }
+.t-sun   { background:#3b2800; color:#fbbf24; }
+.t-noisy { background:#3d1010; color:#fca5a5; }
+.t-sch   { background:#1e1640; color:#c4b5fd; }
+.t-own   { background:#1a2e1a; color:#86efac; }
+.t-stor  { background:#2a2010; color:#fcd34d; }
+.t-img   { background:#1a1a2e; color:#818cf8; }
+.t-new   { background:#0f2520; color:#34d399; }
+.t-elev  { background:#1a2030; color:#93c5fd; }
 
-  /* ── Map ── */
-  #map { flex: 1; height: 100vh; }
+/* ─── MAP ─────────────────────────────────────────────────────────── */
+#map { flex: 1; height: 100vh; }
 
-  /* ── Detail panel ── */
-  #detail-panel { position: absolute; bottom: 0; right: 0; width: 380px; max-height: 70vh; background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px 12px 0 0; z-index: 2000; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s ease; }
-  #detail-panel.open { transform: translateY(0); }
-  #detail-panel::-webkit-scrollbar { width: 4px; }
-  #detail-panel::-webkit-scrollbar-thumb { background: #2d3148; }
+/* ─── DETAIL PANEL ────────────────────────────────────────────────── */
+#detail { position: absolute; bottom: 0; right: 0; width: 420px; max-height: 82vh; background: var(--surface); border: 1px solid var(--border); border-radius: 14px 14px 0 0; z-index: 2000; overflow: hidden; display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.28s cubic-bezier(.4,0,.2,1); }
+#detail.open { transform: translateY(0); }
 
-  #detail-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: #64748b; font-size: 18px; cursor: pointer; line-height: 1; }
-  #detail-close:hover { color: #e2e8f0; }
+#detail-header { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); gap: 8px; flex-shrink: 0; }
+.detail-tabs { display: flex; gap: 4px; flex: 1; }
+.dtab { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.15s; }
+.dtab.active { background: var(--accent); border-color: var(--accent); color: white; }
+#detail-close { background: none; border: none; color: var(--muted); font-size: 17px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+#detail-close:hover { color: var(--text); background: var(--surface2); }
 
-  #detail-content { padding: 20px; }
-  .detail-photo { width: 100%; height: 180px; object-fit: cover; border-radius: 8px; margin-bottom: 14px; background: #0f1117; }
-  .detail-photo-placeholder { width: 100%; height: 80px; background: #0f1117; border-radius: 8px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; color: #2d3148; font-size: 13px; }
-  .detail-score-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
-  .detail-score-big { font-size: 36px; font-weight: 900; }
-  .detail-title { font-size: 14px; font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
-  .detail-sub { font-size: 12px; color: #64748b; margin-bottom: 12px; }
-  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
-  .detail-field { background: #0f1117; border-radius: 6px; padding: 8px 10px; }
-  .detail-field-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .detail-field-value { font-size: 13px; font-weight: 600; color: #e2e8f0; }
-  .detail-field-value.good { color: #10b981; }
-  .detail-field-value.bad  { color: #ef4444; }
-  .detail-section { margin-top: 12px; }
-  .detail-section-title { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .detail-text { font-size: 12px; color: #94a3b8; line-height: 1.5; }
-  .detail-flags { font-size: 12px; color: #fca5a5; }
-  .detail-link { display: block; margin-top: 14px; text-align: center; background: #7c3aed; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; }
-  .detail-link:hover { background: #6d28d9; }
+#detail-body { overflow-y: auto; flex: 1; }
+#detail-body::-webkit-scrollbar { width: 3px; }
+#detail-body::-webkit-scrollbar-thumb { background: var(--border); }
 
-  /* Score bar */
-  .score-breakdown { margin-top: 12px; }
-  .score-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
-  .score-bar-label { font-size: 10px; color: #64748b; width: 100px; text-align: right; }
-  .score-bar-track { flex: 1; height: 6px; background: #0f1117; border-radius: 3px; overflow: hidden; }
-  .score-bar-fill { height: 100%; border-radius: 3px; background: #7c3aed; transition: width 0.5s; }
-  .score-bar-val { font-size: 10px; color: #94a3b8; width: 30px; text-align: right; }
+.detail-tab-pane { display: none; padding: 14px; }
+.detail-tab-pane.active { display: block; }
+
+/* Photo gallery */
+.photo-gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.photo-gallery img { width: 100%; height: 110px; object-fit: cover; cursor: pointer; transition: opacity 0.2s; }
+.photo-gallery img:first-child { grid-column: 1 / -1; height: 160px; }
+.photo-gallery img:hover { opacity: 0.85; }
+.no-photo { background: var(--surface2); border-radius: 8px; height: 80px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+
+/* Detail scores header */
+.detail-score-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.detail-big-score { font-size: 40px; font-weight: 900; line-height: 1; }
+.detail-raw { font-size: 11px; color: var(--muted); }
+.detail-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.detail-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.info-cell { background: var(--surface2); border-radius: 7px; padding: 8px 10px; }
+.info-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.info-val { font-size: 13px; font-weight: 600; }
+.info-val.good { color: var(--green); }
+.info-val.bad  { color: var(--red); }
+.info-val.warn { color: var(--yellow); }
+
+/* AI section */
+.ai-section { background: var(--surface2); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.ai-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.ai-text { font-size: 12px; color: #94a3b8; line-height: 1.55; }
+.ai-red { font-size: 12px; color: var(--red); }
+
+/* Score breakdown bars */
+.breakdown-section { }
+.brow { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; }
+.brow-label { font-size: 10px; color: var(--muted); width: 110px; text-align: right; flex-shrink: 0; }
+.brow-track { flex: 1; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.brow-fill { height: 100%; border-radius: 3px; transition: width 0.6s; }
+.brow-fill.pos { background: var(--accent); }
+.brow-fill.neg { background: var(--red); }
+.brow-val { font-size: 10px; color: var(--muted); width: 36px; text-align: right; flex-shrink: 0; }
+.brow-val.pos { color: var(--accent); }
+.brow-val.neg { color: var(--red); }
+.breakdown-total { display: flex; justify-content: space-between; padding: 8px 0 0; border-top: 1px solid var(--border); margin-top: 6px; font-size: 11px; color: var(--muted); }
+.breakdown-total strong { color: var(--text); }
+
+/* Open Idealista button */
+.visit-btn { display: block; text-align: center; background: var(--accent); color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; margin-top: 12px; transition: background 0.15s; }
+.visit-btn:hover { background: var(--accent2); }
+
+/* Section label */
+.section-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin: 10px 0 5px; }
+
+/* Lightbox */
+#lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 9999; align-items: center; justify-content: center; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; object-fit: contain; }
+#lightbox-close { position: absolute; top: 16px; right: 20px; background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -104,28 +157,33 @@
 <!-- Sidebar -->
 <div id="sidebar">
   <div id="sidebar-header">
-    <h1>🦞 Porto Real Estate Scout</h1>
-    <p>Foz · Aldoar · Boavista · Pinheiro Manso</p>
+    <div>
+      <h1>🦞 Porto Real Estate Scout</h1>
+      <div class="subtitle">Foz · Aldoar · Boavista · Pinheiro Manso</div>
+    </div>
+    <div class="stats-pill">Showing <span id="cnt-shown">—</span> / <span id="cnt-total">—</span></div>
   </div>
 
   <div id="filters">
-    <div class="filter-group">
+    <div class="fg">
       <label>Min Score</label>
       <input type="number" id="f-score" value="0" min="0" max="100" step="5">
     </div>
-    <div class="filter-group">
-      <label>Max Price (€)</label>
-      <input type="number" id="f-price" value="3100" min="0" max="5000" step="100">
+    <div class="fg">
+      <label>Max Price (€/mo)</label>
+      <input type="number" id="f-price" value="3100" min="0" max="6000" step="100">
     </div>
-    <div class="filter-group">
+    <div class="fg">
       <label>Rooms</label>
       <select id="f-rooms">
         <option value="">All</option>
+        <option value="T1">T1</option>
         <option value="T2">T2</option>
         <option value="T3">T3</option>
+        <option value="T4">T4</option>
       </select>
     </div>
-    <div class="filter-group">
+    <div class="fg">
       <label>Garage</label>
       <select id="f-garage">
         <option value="">Any</option>
@@ -133,28 +191,36 @@
         <option value="no">No</option>
       </select>
     </div>
-    <div class="filter-group">
+    <div class="fg">
       <label>Sea View</label>
       <select id="f-seaview">
         <option value="">Any</option>
         <option value="yes">Yes</option>
-        <option value="no">No</option>
       </select>
     </div>
-    <div class="filter-group">
+    <div class="fg">
+      <label>Max Walk to Sea (min)</label>
+      <input type="number" id="f-walk" value="" min="0" max="60" step="5" placeholder="Any">
+    </div>
+    <div class="fg">
       <label>Sort By</label>
       <select id="f-sort">
-        <option value="score">Score</option>
+        <option value="score">Score ↓</option>
+        <option value="raw">Raw Score ↓</option>
         <option value="price_asc">Price ↑</option>
         <option value="price_desc">Price ↓</option>
-        <option value="size">Size</option>
+        <option value="size">Size ↓</option>
+        <option value="dom">Days on Market ↑</option>
       </select>
     </div>
-    <button id="apply-filters">Apply Filters</button>
-  </div>
-
-  <div id="stats-bar">
-    Showing <span id="count-shown">—</span> of <span id="count-total">—</span> listings
+    <div class="fg">
+      <label>Has Photos</label>
+      <select id="f-photos">
+        <option value="">Any</option>
+        <option value="yes">Yes</option>
+      </select>
+    </div>
+    <button id="apply-btn">Apply Filters</button>
   </div>
 
   <div id="listing-list"></div>
@@ -164,347 +230,328 @@
 <div id="map"></div>
 
 <!-- Detail Panel -->
-<div id="detail-panel">
-  <button id="detail-close">✕</button>
-  <div id="detail-content"></div>
+<div id="detail">
+  <div id="detail-header">
+    <div class="detail-tabs">
+      <button class="dtab active" data-tab="overview">Overview</button>
+      <button class="dtab" data-tab="breakdown">Score Breakdown</button>
+      <button class="dtab" data-tab="photos">Photos</button>
+    </div>
+    <button id="detail-close">✕</button>
+  </div>
+  <div id="detail-body">
+    <div class="detail-tab-pane active" id="tab-overview"></div>
+    <div class="detail-tab-pane" id="tab-breakdown"></div>
+    <div class="detail-tab-pane" id="tab-photos"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox">
+  <button id="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
 </div>
 
 <script>
-// ── Map setup ──────────────────────────────────────────────────────────────
+// ── Setup ──────────────────────────────────────────────────────────────────
 const map = L.map('map', { center: [41.155, -8.655], zoom: 14 });
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO', maxZoom: 19
 }).addTo(map);
 
-let allListings = [];
-let markers = {};
-let activeId = null;
+let all = [], markers = {}, activeId = null;
 
-// ── Score colour ───────────────────────────────────────────────────────────
-function scoreClass(s) {
-  if (s >= 80) return 'score-green';
-  if (s >= 70) return 'score-yellow';
-  if (s >= 60) return 'score-orange';
-  return 'score-red';
-}
-function scoreColor(s) {
-  if (s >= 80) return '#10b981';
-  if (s >= 70) return '#f59e0b';
-  if (s >= 60) return '#f97316';
-  return '#ef4444';
-}
+// ── Score helpers ──────────────────────────────────────────────────────────
+const scoreColor = s => s >= 75 ? '#10b981' : s >= 60 ? '#f59e0b' : s >= 45 ? '#f97316' : '#ef4444';
+const scoreClass = s => s >= 75 ? 'score-green' : s >= 60 ? 'score-yellow' : s >= 45 ? 'score-orange' : 'score-red';
 
-// ── Marker icon ────────────────────────────────────────────────────────────
 function makeIcon(score, active = false) {
-  const color = scoreColor(score);
-  const size  = active ? 36 : 28;
-  const svg = `<svg width="${size}" height="${size}" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="${color}" fill-opacity="0.9" stroke="white" stroke-width="${active ? 3 : 1.5}"/>
-    <text x="18" y="23" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="11" font-weight="800" fill="white">${score}</text>
+  const c = scoreColor(score), sz = active ? 38 : 30;
+  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="19" cy="19" r="17" fill="${c}" fill-opacity="${active ? 1 : 0.85}" stroke="${active ? 'white' : 'rgba(255,255,255,0.5)'}" stroke-width="${active ? 3 : 1.5}"/>
+    <text x="19" y="24" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="${score >= 100 ? 9 : 11}" font-weight="800" fill="white">${score}</text>
   </svg>`;
-  return L.divIcon({ html: svg, className: '', iconSize: [size, size], iconAnchor: [size/2, size/2] });
+  return L.divIcon({ html: svg, className: '', iconSize: [sz, sz], iconAnchor: [sz/2, sz/2] });
 }
 
-// ── Filter & render ────────────────────────────────────────────────────────
+// ── Filters ────────────────────────────────────────────────────────────────
+const f = id => document.getElementById(id);
+
 function getFilters() {
   return {
-    minScore: parseInt(document.getElementById('f-score').value) || 0,
-    maxPrice: parseInt(document.getElementById('f-price').value) || 9999,
-    rooms:    document.getElementById('f-rooms').value,
-    garage:   document.getElementById('f-garage').value,
-    seaview:  document.getElementById('f-seaview').value,
-    sort:     document.getElementById('f-sort').value,
+    score:   parseInt(f('f-score').value) || 0,
+    price:   parseInt(f('f-price').value) || 9999,
+    rooms:   f('f-rooms').value,
+    garage:  f('f-garage').value,
+    seaview: f('f-seaview').value,
+    walk:    parseInt(f('f-walk').value) || 0,
+    sort:    f('f-sort').value,
+    photos:  f('f-photos').value,
   };
 }
 
 function applyFilters() {
-  const f = getFilters();
-  let filtered = allListings.filter(l => {
-    if ((l.opportunity_score || 0) < f.minScore)   return false;
-    if ((l.price_eur || 0) > f.maxPrice)            return false;
-    if (f.rooms && l.rooms !== f.rooms)             return false;
-    if (f.garage === 'yes' && !l.has_garage)        return false;
-    if (f.garage === 'no'  &&  l.has_garage)        return false;
-    if (f.seaview === 'yes' && !l.sea_view)         return false;
-    if (f.seaview === 'no'  &&  l.sea_view)         return false;
+  const fi = getFilters();
+  let filtered = all.filter(l => {
+    if ((l.opportunity_score || 0) < fi.score)             return false;
+    if ((l.price_eur || 0) > fi.price)                     return false;
+    if (fi.rooms && (l.rooms || '').toUpperCase() !== fi.rooms) return false;
+    if (fi.garage === 'yes' && !l.has_garage)              return false;
+    if (fi.garage === 'no'  &&  l.has_garage)              return false;
+    if (fi.seaview === 'yes' && !l.sea_view)               return false;
+    if (fi.walk && (l.walk_time_sea_min || 999) > fi.walk) return false;
+    if (fi.photos === 'yes' && !(l.photo_urls?.length))    return false;
     return true;
   });
 
-  // Sort
   filtered.sort((a, b) => {
-    if (f.sort === 'score')      return (b.opportunity_score||0) - (a.opportunity_score||0);
-    if (f.sort === 'price_asc')  return (a.price_eur||0) - (b.price_eur||0);
-    if (f.sort === 'price_desc') return (b.price_eur||0) - (a.price_eur||0);
-    if (f.sort === 'size')       return (b.size_m2||0) - (a.size_m2||0);
+    if (fi.sort === 'score')      return (b.opportunity_score||0) - (a.opportunity_score||0);
+    if (fi.sort === 'raw')        return (b.raw_score||0) - (a.raw_score||0);
+    if (fi.sort === 'price_asc')  return (a.price_eur||0) - (b.price_eur||0);
+    if (fi.sort === 'price_desc') return (b.price_eur||0) - (a.price_eur||0);
+    if (fi.sort === 'size')       return (b.size_m2||0) - (a.size_m2||0);
+    if (fi.sort === 'dom')        return (a.days_on_market||0) - (b.days_on_market||0);
     return 0;
   });
 
   renderList(filtered);
   renderMarkers(filtered);
-  document.getElementById('count-shown').textContent = filtered.length;
+  f('cnt-shown').textContent = filtered.length;
 }
 
+// ── Render list ────────────────────────────────────────────────────────────
 function renderList(listings) {
-  const list = document.getElementById('listing-list');
-  list.innerHTML = '';
-  listings.forEach((l, idx) => {
+  const el = f('listing-list');
+  el.innerHTML = '';
+  listings.forEach((l, i) => {
     const sc = l.opportunity_score || 0;
     const div = document.createElement('div');
-    div.className = 'listing-card' + (l.id === activeId ? ' active' : '');
+    div.className = 'card' + (l.id === activeId ? ' active' : '');
     div.dataset.id = l.id;
 
-    const badges = [];
-    if (l.sea_view)   badges.push(`<span class="badge badge-sea">🌊 Sea View</span>`);
-    if (l.has_garage) badges.push(`<span class="badge badge-garage">🚗 Garage${l.parking_spaces > 1 ? ` ×${l.parking_spaces}` : ''}</span>`);
-    if (l.has_storage) badges.push(`<span class="badge badge-storage">📦 Storage</span>`);
-    if (l.sun_exposure && !['unknown',''].includes(l.sun_exposure.toLowerCase()))
-      badges.push(`<span class="badge badge-sun">☀️ ${l.sun_exposure}</span>`);
-    if ((l.school_score||0) >= 7)
-      badges.push(`<span class="badge badge-school">🏫 Good Schools</span>`);
-    if ((l.noise_penalty||0) < -1)
-      badges.push(`<span class="badge badge-noise">🔊 Noisy</span>`);
+    const tags = [];
+    if (l.sea_view)       tags.push(`<span class="tag t-sea">🌊 Sea View</span>`);
+    if (l.has_garage)     tags.push(`<span class="tag t-gar">🚗 Garage${(l.parking_spaces||0)>1?' ×'+l.parking_spaces:''}</span>`);
+    if (l.has_storage)    tags.push(`<span class="tag t-stor">📦 Storage</span>`);
+    if (l.elevator)       tags.push(`<span class="tag t-elev">🛗 Lift</span>`);
+    if (l.owner_direct)   tags.push(`<span class="tag t-own">👤 Owner</span>`);
+    if (l.image_score)    tags.push(`<span class="tag t-img">📸 ${l.image_score}/10</span>`);
+    if ((l.days_on_market||0) === 0) tags.push(`<span class="tag t-new">✨ New</span>`);
+    if ((l.noise_penalty||0) < -1)   tags.push(`<span class="tag t-noisy">🔊 Noisy</span>`);
+    if (l.sun_exposure && !['unknown',''].includes((l.sun_exposure||'').toLowerCase()))
+      tags.push(`<span class="tag t-sun">☀️ ${l.sun_exposure}</span>`);
 
+    const ppm = l.price_per_m2 ? ` · €${l.price_per_m2}/m²` : '';
+    const walk = l.walk_time_sea_min ? ` · 🚶${l.walk_time_sea_min}min sea` : '';
     div.innerHTML = `
-      <div class="card-top">
-        <div class="card-score ${scoreClass(sc)}">${sc}</div>
-        <div class="card-rank">#${idx+1} · ${l.rooms || '?'}</div>
+      <div class="card-score-col">
+        <div class="cscore" style="color:${scoreColor(sc)}">${sc}</div>
+        <div class="crank">#${i+1}</div>
       </div>
-      <div class="card-price">€${(l.price_eur||0).toLocaleString()}/mo · ${l.size_m2||'?'}m²</div>
-      <div class="card-meta">${l.walk_time_sea_min ? `🚶 ${l.walk_time_sea_min}min sea` : ''} ${l.elevation_m ? `· ${l.elevation_m}m alt` : ''}</div>
-      <div class="card-neighborhood">${l.neighborhood || ''}</div>
-      ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
-    `;
-    div.addEventListener('click', () => selectListing(l.id));
-    list.appendChild(div);
+      <div class="card-body">
+        <div class="card-price">€${(l.price_eur||0).toLocaleString()}/mo · ${l.size_m2||'?'}m²</div>
+        <div class="card-rooms">${l.rooms||'?'}${l.wcs ? ' · '+l.wcs+' WC' : ''}${l.floor_level ? ' · Floor '+l.floor_level : ''}${ppm}</div>
+        <div class="card-neigh">${l.neighborhood || ''}</div>
+        ${tags.length ? `<div class="card-tags">${tags.join('')}</div>` : ''}
+        ${walk ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${walk.trim()}</div>` : ''}
+      </div>`;
+    div.addEventListener('click', () => select(l.id));
+    el.appendChild(div);
   });
 }
 
+// ── Render markers ─────────────────────────────────────────────────────────
 function renderMarkers(listings) {
-  // Remove old markers
   Object.values(markers).forEach(m => map.removeLayer(m));
   markers = {};
-
   listings.forEach(l => {
-    const lat = l.lat || l.dist_to_sea_km && null;
-    const lng = l.lng;
-    if (!lat || !lng) return;
-
-    const m = L.marker([lat, lng], { icon: makeIcon(l.opportunity_score || 0, l.id === activeId) })
-      .addTo(map)
-      .on('click', () => selectListing(l.id));
+    if (!l.lat || !l.lng) return;
+    const m = L.marker([l.lat, l.lng], { icon: makeIcon(l.opportunity_score||0, l.id === activeId) })
+      .addTo(map).on('click', () => select(l.id));
     markers[l.id] = m;
   });
 }
 
 // ── Select listing ─────────────────────────────────────────────────────────
-function selectListing(id) {
+function select(id) {
   activeId = id;
-  const l = allListings.find(x => x.id === id);
+  const l = all.find(x => x.id === id);
   if (!l) return;
-
-  // Update sidebar active state
-  document.querySelectorAll('.listing-card').forEach(c => {
-    c.classList.toggle('active', c.dataset.id === id);
-  });
-
-  // Update marker icons
-  Object.entries(markers).forEach(([mid, m]) => {
-    m.setIcon(makeIcon(allListings.find(x=>x.id===mid)?.opportunity_score||0, mid === id));
-  });
-
-  // Pan map
-  if (l.lat && l.lng) map.panTo([l.lat, l.lng], { animate: true });
-
-  // Show detail panel
-  showDetail(l);
+  document.querySelectorAll('.card').forEach(c => c.classList.toggle('active', c.dataset.id === id));
+  Object.entries(markers).forEach(([mid, m]) => m.setIcon(makeIcon(all.find(x=>x.id===mid)?.opportunity_score||0, mid === id)));
+  if (l.lat && l.lng) map.panTo([l.lat, l.lng]);
+  renderDetail(l);
+  // Scroll card into view
+  const card = document.querySelector(`.card[data-id="${id}"]`);
+  card?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function showDetail(l) {
+// ── Detail panel ───────────────────────────────────────────────────────────
+function renderDetail(l) {
   const sc = l.opportunity_score || 0;
-  const photo = l.photo_urls?.[0] || null;
+  const raw = l.raw_score || 0;
+  const photos = l.photo_urls || [];
 
-  const scoreBreakdown = [
-    ['Condition/Quality', Math.min(25, (l.image_score||0)*2.5), 25],
-    ['Sun Exposure',      sunScore(l.sun_exposure, l.image_summary), 20],
-    ['Zone',              l.opportunity_score > 0 ? Math.min(15, sc/6) : 0, 15],
-    ['Practical',         l.has_garage ? 5 : 0, 18],
-    ['Floor Level',       floorScore(l.floor_level), 8],
-    ['Space/Room',        spaceScore(l.space_per_room_m2), 7],
-    ['Price Value',       priceScore(l.price_delta_pct), 7],
+  // ── Overview tab ────────────────────────────────────────────────────────
+  const photoHtml = photos.length
+    ? `<div class="photo-gallery">${photos.slice(0, 5).map(p =>
+        `<img src="${p}" loading="lazy" onerror="this.style.display='none'" onclick="openLightbox('${p}')">`
+      ).join('')}</div>`
+    : `<div class="no-photo">No photos available</div>`;
+
+  const pctStr = l.price_delta_pct != null ? (l.price_delta_pct > 0 ? '+' : '') + l.price_delta_pct + '%' : '';
+  const ppmClass = (l.price_delta_pct || 0) <= -5 ? 'good' : (l.price_delta_pct || 0) >= 10 ? 'bad' : '';
+
+  f('tab-overview').innerHTML = `
+    ${photoHtml}
+    <div class="detail-score-row">
+      <div class="detail-big-score" style="color:${scoreColor(sc)}">${sc}</div>
+      <div>
+        <div style="font-size:11px;color:var(--muted)">/ 100 normalised</div>
+        <div class="detail-raw">raw score: ${raw}</div>
+      </div>
+      ${l.image_score != null ? `<div style="margin-left:auto;font-size:13px;color:var(--muted)">📸 <strong style="color:var(--text)">${l.image_score}</strong>/10</div>` : ''}
+    </div>
+    <div class="detail-title">${l.title || l.neighborhood || l.id}</div>
+    <div class="detail-sub">${l.neighborhood || ''} · ${l.days_on_market ? l.days_on_market + 'd on market' : 'just listed'} · ${l.year_built ? 'Built '+l.year_built : ''}</div>
+
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-label">Price</div><div class="info-val">€${(l.price_eur||0).toLocaleString()}/mo</div></div>
+      <div class="info-cell"><div class="info-label">€/m²</div><div class="info-val ${ppmClass}">€${l.price_per_m2||'?'} ${pctStr ? '('+pctStr+')' : ''}</div></div>
+      <div class="info-cell"><div class="info-label">Size</div><div class="info-val">${l.size_m2||'?'}m² ${l.area_util ? '<span style="font-size:10px;color:var(--muted)">(útil '+l.area_util+'m²)</span>' : ''}</div></div>
+      <div class="info-cell"><div class="info-label">Space/Room</div><div class="info-val">${l.space_per_room_m2||'?'} m²</div></div>
+      <div class="info-cell"><div class="info-label">Rooms / WCs</div><div class="info-val">${l.rooms||'?'} · ${l.wcs||'?'} WC</div></div>
+      <div class="info-cell"><div class="info-label">Floor</div><div class="info-val">${l.floor_level != null ? l.floor_level : '?'} ${l.elevator ? '🛗' : ''}</div></div>
+      <div class="info-cell"><div class="info-label">Sun</div><div class="info-val ${['sul','south','se','nascente'].some(s => (l.sun_exposure||'').toLowerCase().includes(s)) ? 'good' : ''}">${l.sun_exposure||'?'}</div></div>
+      <div class="info-cell"><div class="info-label">Energy</div><div class="info-val">${l.energy_cert||'?'}</div></div>
+      <div class="info-cell"><div class="info-label">Walk to Sea</div><div class="info-val ${(l.walk_time_sea_min||99) <= 10 ? 'good' : ''}">${l.walk_time_sea_min ? l.walk_time_sea_min+'min' : l.dist_to_sea_km ? l.dist_to_sea_km+'km' : '?'}</div></div>
+      <div class="info-cell"><div class="info-label">Elevation</div><div class="info-val ${(l.elevation_m||0) > 80 ? 'warn' : ''}">${l.elevation_m != null ? l.elevation_m+'m' : '?'}</div></div>
+      <div class="info-cell"><div class="info-label">Noise</div><div class="info-val ${(l.noise_penalty||0) < -1 ? 'bad' : 'good'}">${(l.noise_penalty||0) === 0 ? 'Quiet ✓' : l.noise_penalty+' pts'}</div></div>
+      <div class="info-cell"><div class="info-label">School Score</div><div class="info-val ${(l.school_score||0) >= 7 ? 'good' : ''}">${l.school_score || '—'} ${l.school_score ? '/10' : ''}</div></div>
+      <div class="info-cell"><div class="info-label">Supermarket</div><div class="info-val">${l.nearest_supermarket_km != null ? l.nearest_supermarket_km+'km' : '?'}</div></div>
+      <div class="info-cell"><div class="info-label">Bus Stops (400m)</div><div class="info-val">${l.bus_stops_400m != null ? l.bus_stops_400m : '?'}</div></div>
+      <div class="info-cell"><div class="info-label">Garage</div><div class="info-val ${l.has_garage ? 'good' : ''}">${l.has_garage ? '✓ Yes'+(l.parking_spaces>1?' ×'+l.parking_spaces:'') : 'No'}</div></div>
+      <div class="info-cell"><div class="info-label">Storage</div><div class="info-val ${l.has_storage ? 'good' : ''}">${l.has_storage ? '✓ Yes' : 'No'}</div></div>
+    </div>
+
+    ${l.image_summary ? `<div class="ai-section"><div class="ai-label">🤖 AI Assessment (${l.finish || ''} · ${l.light_quality || ''}${l.wide_angle_flag ? ' · wide-angle' : ''})</div><div class="ai-text">${l.image_summary}</div></div>` : ''}
+    ${(l.red_flags_visual && l.red_flags_visual.toLowerCase() !== 'none') ? `<div class="ai-section"><div class="ai-label">⚠️ Red Flags</div><div class="ai-red">${l.red_flags_visual}</div></div>` : ''}
+    ${l.noise_sources && !['none',''].includes((l.noise_sources||'').toLowerCase()) ? `<div class="ai-section"><div class="ai-label">🔊 Noise Sources</div><div class="ai-red">${l.noise_sources}</div></div>` : ''}
+    ${l.full_description ? `<div class="ai-section"><div class="ai-label">📋 Description</div><div class="ai-text">${l.full_description.slice(0,400)}${l.full_description.length > 400 ? '…' : ''}</div></div>` : ''}
+    ${l.nearest_good_school ? `<div class="ai-section"><div class="ai-label">🏫 Nearest Good School</div><div class="ai-text">${l.nearest_good_school} (${l.nearest_school_km ? l.nearest_school_km+'km' : '?'})</div></div>` : ''}
+    <a class="visit-btn" href="${l.url}" target="_blank">Open on Idealista →</a>`;
+
+  // ── Breakdown tab ─────────────────────────────────────────────────────────
+  const bd = l.score_breakdown || {};
+  const COMPONENTS = [
+    ['Image: Condition',  'image_condition', 25],
+    ['Image: Renovation', 'image_renovation', 8],
+    ['Image: Light',      'image_light', 4],
+    ['Image: Finish',     'image_finish', 6],
+    ['Image: Area',       'image_area', 4],
+    ['Sun Exposure',      'sun', 20],
+    ['Zone',              'zone', 15],
+    ['Garage',            'garage', 6],
+    ['Storage',           'storage', 3],
+    ['Outdoor Space',     'outdoor', 4],
+    ['Elevator',          'elevator', 3],
+    ['Floor Level',       'floor', 8],
+    ['Space Efficiency',  'space_efficiency', 7],
+    ['Price vs Median',   'price_value', 8],
+    ['Sea View',          'sea_view', 3],
+    ['Walk to Sea',       'sea_walk', 3],
+    ['School Quality',    'school', 3],
+    ['Noise Penalty',     'noise', 0],
+    ['Description Bonus', 'description', 12],
+    ['Parks (800m)',      'parks', 2],
+    ['Hospital Prox.',    'hospital', 2],
+    ['Bus Stops',         'bus', 3],
+    ['Supermarket Tier',  'supermarket', 2],
+    ['Restaurants',       'restaurants', 2],
+    ['Pharmacy',          'pharmacy', 1],
+    ['Facade',            'facade', 4],
+    ['Owner Direct',      'owner_direct', 2],
+    ['Staleness',         'staleness', 0],
+    ['Price Sanity',      'price_sanity', 0],
+    ['Red Flags',         'red_flags', 0],
   ];
 
-  const html = `
-    ${photo
-      ? `<img class="detail-photo" src="${photo}" onerror="this.style.display='none'" loading="lazy">`
-      : `<div class="detail-photo-placeholder">No photos available</div>`}
+  const bRows = COMPONENTS.map(([label, key, maxPos]) => {
+    const val = bd[key];
+    if (val == null) return '';
+    const v = Number(val);
+    const isNeg = v < 0;
+    const trackW = maxPos > 0 ? Math.abs(v) / maxPos * 100 : (v !== 0 ? 100 : 0);
+    return `<div class="brow">
+      <div class="brow-label">${label}</div>
+      <div class="brow-track"><div class="brow-fill ${isNeg ? 'neg' : 'pos'}" style="width:${Math.min(100,trackW)}%"></div></div>
+      <div class="brow-val ${isNeg ? 'neg' : v > 0 ? 'pos' : ''}">${v > 0 ? '+' : ''}${v}</div>
+    </div>`;
+  }).join('');
 
-    <div class="detail-score-row">
-      <div class="detail-score-big ${scoreClass(sc)}">${sc}</div>
-      <div style="font-size:13px;color:#64748b">/ 100</div>
-      ${l.image_score ? `<div style="font-size:12px;color:#94a3b8;margin-left:auto">📸 ${l.image_score}/10</div>` : ''}
+  const total = Object.values(bd).reduce((s, v) => s + Number(v||0), 0);
+  f('tab-breakdown').innerHTML = `
+    <div style="margin-bottom:10px">
+      <div class="detail-title">${l.neighborhood || l.id}</div>
+      <div class="detail-sub">Raw score: <strong>${raw}</strong> → Normalised: <strong>${sc}/100</strong></div>
     </div>
+    <div class="breakdown-section">${bRows}</div>
+    <div class="breakdown-total"><span>Total raw points</span><strong>${total}</strong></div>`;
 
-    <div class="detail-title">${l.title || l.neighborhood || ''}</div>
-    <div class="detail-sub">${l.neighborhood || ''} · ${l.days_on_market ? l.days_on_market + ' days on market' : 'just listed'}</div>
+  // ── Photos tab ────────────────────────────────────────────────────────────
+  if (photos.length) {
+    f('tab-photos').innerHTML = `
+      <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">${photos.length} photo${photos.length>1?'s':''} · click to enlarge</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+        ${photos.map(p => `<img src="${p}" loading="lazy" onerror="this.parentElement.removeChild(this)" onclick="openLightbox('${p}')" style="width:100%;height:130px;object-fit:cover;border-radius:6px;cursor:pointer">`).join('')}
+      </div>`;
+  } else {
+    f('tab-photos').innerHTML = `<div class="no-photo" style="height:120px">No photos available</div>`;
+  }
 
-    <div class="detail-grid">
-      <div class="detail-field">
-        <div class="detail-field-label">Price</div>
-        <div class="detail-field-value">€${(l.price_eur||0).toLocaleString()}/mo</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Size</div>
-        <div class="detail-field-value">${l.size_m2||'?'}m² ${l.area_util ? `(útil ${l.area_util}m²)` : ''}</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Rooms / WCs</div>
-        <div class="detail-field-value">${l.rooms||'?'} · ${l.wcs||'?'} WC</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Floor</div>
-        <div class="detail-field-value">${l.floor_level || '?'}</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Walk to Sea</div>
-        <div class="detail-field-value ${(l.walk_time_sea_min||99) <= 10 ? 'good' : ''}">${l.walk_time_sea_min ? l.walk_time_sea_min + ' min' : l.dist_to_sea_km ? l.dist_to_sea_km + ' km' : '?'}</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Elevation</div>
-        <div class="detail-field-value">${l.elevation_m != null ? l.elevation_m + 'm' : '?'}</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">Sun</div>
-        <div class="detail-field-value ${['sul','south','southeast','se'].some(s => (l.sun_exposure||'').toLowerCase().includes(s)) ? 'good' : ''}">${l.sun_exposure || '?'}</div>
-      </div>
-      <div class="detail-field">
-        <div class="detail-field-label">€/m²</div>
-        <div class="detail-field-value ${(l.price_delta_pct||0) < -5 ? 'good' : (l.price_delta_pct||0) > 5 ? 'bad' : ''}">${l.price_per_m2 ? '€'+l.price_per_m2 : '?'} ${l.price_delta_pct != null ? '('+( l.price_delta_pct > 0 ? '+' : '')+l.price_delta_pct+'%)' : ''}</div>
-      </div>
-      ${l.nearest_supermarket_km != null ? `
-      <div class="detail-field">
-        <div class="detail-field-label">Supermarket</div>
-        <div class="detail-field-value">${l.nearest_supermarket_km}km</div>
-      </div>` : ''}
-      ${l.nearest_metro_km != null ? `
-      <div class="detail-field">
-        <div class="detail-field-label">Metro</div>
-        <div class="detail-field-value">${l.nearest_metro_km}km</div>
-      </div>` : ''}
-      ${l.school_score != null ? `
-      <div class="detail-field">
-        <div class="detail-field-label">School Score</div>
-        <div class="detail-field-value ${(l.school_score||0) >= 7 ? 'good' : ''}">${l.school_score || '—'}/10</div>
-      </div>` : ''}
-      ${l.noise_penalty != null ? `
-      <div class="detail-field">
-        <div class="detail-field-label">Noise</div>
-        <div class="detail-field-value ${(l.noise_penalty||0) < -1 ? 'bad' : 'good'}">${l.noise_penalty === 0 ? 'Quiet' : l.noise_penalty + ' pts'}</div>
-      </div>` : ''}
-    </div>
-
-    ${l.image_summary ? `
-    <div class="detail-section">
-      <div class="detail-section-title">AI Assessment</div>
-      <div class="detail-text">${l.image_summary}</div>
-    </div>` : ''}
-
-    ${l.red_flags_visual && l.red_flags_visual.toLowerCase() !== 'none' ? `
-    <div class="detail-section">
-      <div class="detail-section-title">⚠️ Red Flags</div>
-      <div class="detail-flags">${l.red_flags_visual}</div>
-    </div>` : ''}
-
-    ${l.noise_sources && l.noise_sources !== 'None detected' ? `
-    <div class="detail-section">
-      <div class="detail-section-title">🔊 Noise Sources</div>
-      <div class="detail-flags">${l.noise_sources}</div>
-    </div>` : ''}
-
-    ${l.nearest_good_school ? `
-    <div class="detail-section">
-      <div class="detail-section-title">🏫 Nearest Good School</div>
-      <div class="detail-text">${l.nearest_good_school}</div>
-    </div>` : ''}
-
-    <div class="score-breakdown detail-section">
-      <div class="detail-section-title">Score Breakdown</div>
-      ${scoreBreakdown.map(([label, val, max]) => `
-        <div class="score-bar-row">
-          <div class="score-bar-label">${label}</div>
-          <div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(val/max*100)}%"></div></div>
-          <div class="score-bar-val">${Math.round(val)}/${max}</div>
-        </div>`).join('')}
-    </div>
-
-    <a class="detail-link" href="${l.url}" target="_blank">View on Idealista →</a>
-  `;
-
-  document.getElementById('detail-content').innerHTML = html;
-  document.getElementById('detail-panel').classList.add('open');
+  // Show panel, reset to overview tab
+  document.getElementById('detail').classList.add('open');
+  setTab('overview');
 }
 
-// ── Score helper functions ─────────────────────────────────────────────────
-function sunScore(sun, summary) {
-  const s = ((sun||'') + ' ' + (summary||'')).toLowerCase();
-  if (['sul','south','southeast','se ','sudeste','sse'].some(x => s.includes(x))) return 20;
-  if (['southwest','sudoeste','ssw'].some(x => s.includes(x))) return 18;
-  if (['nascente','east','oeste','west','poente','este'].some(x => s.includes(x))) return 12;
-  if (['norte','north'].some(x => s.includes(x))) return 0;
-  return 8;
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function setTab(name) {
+  document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.detail-tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-'+name));
 }
-function floorScore(floor) {
-  const s = (floor||'').toLowerCase();
-  if (['r/c','rc','rés','rez','ground'].some(x => s.includes(x))) return 0;
-  const m = s.match(/\d+/);
-  if (m) { const n=parseInt(m[0]); if(n<=1) return 0; if(n==2) return 3; if(n==3) return 5; return 7; }
-  return 2;
-}
-function spaceScore(spr) {
-  if (!spr) return 1;
-  if (spr >= 50) return 7;
-  if (spr >= 40) return 5;
-  if (spr >= 30) return 3;
-  return 1;
-}
-function priceScore(delta) {
-  if (delta == null) return 3;
-  if (delta <= -10) return 7;
-  if (delta <= -5)  return 5;
-  if (delta <= 5)   return 3;
-  return 1;
-}
+document.querySelectorAll('.dtab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 
-// ── Close detail panel ─────────────────────────────────────────────────────
-document.getElementById('detail-close').addEventListener('click', () => {
-  document.getElementById('detail-panel').classList.remove('open');
+// ── Close detail ───────────────────────────────────────────────────────────
+f('detail-close').addEventListener('click', () => {
+  document.getElementById('detail').classList.remove('open');
   activeId = null;
-  document.querySelectorAll('.listing-card').forEach(c => c.classList.remove('active'));
-  Object.entries(markers).forEach(([mid, m]) => {
-    m.setIcon(makeIcon(allListings.find(x=>x.id===mid)?.opportunity_score||0, false));
-  });
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  Object.entries(markers).forEach(([mid, m]) => m.setIcon(makeIcon(all.find(x=>x.id===mid)?.opportunity_score||0, false)));
 });
 
-// ── Filter button ──────────────────────────────────────────────────────────
-document.getElementById('apply-filters').addEventListener('click', applyFilters);
-['f-sort', 'f-rooms', 'f-garage', 'f-seaview'].forEach(id => {
-  document.getElementById(id).addEventListener('change', applyFilters);
-});
+// ── Lightbox ───────────────────────────────────────────────────────────────
+function openLightbox(src) {
+  f('lightbox-img').src = src;
+  f('lightbox').classList.add('open');
+}
+f('lightbox-close').addEventListener('click', () => f('lightbox').classList.remove('open'));
+f('lightbox').addEventListener('click', e => { if(e.target === f('lightbox')) f('lightbox').classList.remove('open'); });
+
+// ── Filter event wiring ────────────────────────────────────────────────────
+f('apply-btn').addEventListener('click', applyFilters);
+['f-sort','f-rooms','f-garage','f-seaview','f-photos'].forEach(id => f(id).addEventListener('change', applyFilters));
 
 // ── Load data ──────────────────────────────────────────────────────────────
 fetch('enriched_listings.json')
   .then(r => r.json())
   .then(data => {
-    allListings = data;
-    document.getElementById('count-total').textContent = data.length;
+    all = data;
+    f('cnt-total').textContent = data.length;
     applyFilters();
   })
-  .catch(err => {
-    document.getElementById('listing-list').innerHTML =
-      `<div style="padding:20px;color:#ef4444;font-size:13px">
-        Failed to load listings.<br>
-        Run a local server: <code>python3 -m http.server 8080</code><br>
-        Then open <a href="http://localhost:8080" style="color:#7c3aed">localhost:8080</a>
-      </div>`;
+  .catch(() => {
+    f('listing-list').innerHTML = `<div style="padding:20px;color:var(--red);font-size:13px">
+      Failed to load. Run:<br><code style="color:#94a3b8">python3 -m http.server 8765</code><br>then open localhost:8765</div>`;
   });
 </script>
 </body>
